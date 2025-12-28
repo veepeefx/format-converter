@@ -6,6 +6,8 @@
 #include <QMainWindow>
 #include <QVBoxLayout>
 
+#include "CommonEnums.h"
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -21,11 +23,18 @@ private:
     QLineEdit* inputFilePathLineEdit_;
     QLineEdit* outputFolderLineEdit_;
 
+    FileType inputFileType_ = FileType::UNKNOWN;
+
     void initInputFileWidgets();
     void initOutputFileWidgets();
+    void initConvertSettings();
+
+    QString getFilesFolderPath(QString filePath);
+    void updateConvertSettings();
 
 private slots:
     void browseFileButtonClicked();
+    void inputFilePathEditingFinished();
     void browseFolderButtonClicked();
 
 };
