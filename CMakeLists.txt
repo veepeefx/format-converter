@@ -13,9 +13,9 @@ find_package(Qt6 COMPONENTS
         Widgets
         REQUIRED)
 
-add_executable(format-converter main.cpp
-        MainWindow.cpp
-        MainWindow.h)
+add_executable(format-converter src/main.cpp
+        src/MainWindow.cpp
+        src/MainWindow.h)
 
 target_link_libraries(format-converter
         Qt::Core
