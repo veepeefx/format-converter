@@ -1,6 +1,7 @@
 #ifndef FORMAT_CONVERTER_COMMONENUMS_H
 #define FORMAT_CONVERTER_COMMONENUMS_H
 #include <qmap.h>
+#include <qset.h>
 #include <qstring.h>
 
 enum class FileType {
@@ -43,12 +44,12 @@ static const QMap<QString, VideoFormats> videoFormatLabels = {
 };
 
 enum class ImageFormats {
-    JPG, PNG, GIF, BMP, TIFF, HEIF, WEBP, ICO, RAW
+    JPEG, PNG, GIF, BMP, TIFF, HEIF, WEBP, ICO
 };
 
 static const QMap<QString, ImageFormats> imageFormatLabels = {
-    { "jpg", ImageFormats::JPG },
-    { "jpeg", ImageFormats::JPG },
+    { "jpg", ImageFormats::JPEG },
+    { "jpeg", ImageFormats::JPEG },
     { "png", ImageFormats::PNG },
     { "gif", ImageFormats::GIF },
     { "bmp", ImageFormats::BMP },
@@ -56,10 +57,12 @@ static const QMap<QString, ImageFormats> imageFormatLabels = {
     { "tiff", ImageFormats::TIFF },
     { "heif", ImageFormats::HEIF },
     { "heic", ImageFormats::HEIF },
-    { "ico", ImageFormats::ICO },
-    { "raw", ImageFormats::RAW },
-    { "cr2", ImageFormats::RAW },
-    { "nef", ImageFormats::RAW }
+    { "ico", ImageFormats::ICO }
+};
+
+// includes duplicates (multiple forms) in format labels for example jpg and jpeg only jpg is shown
+static const QSet<QString> labelsBlackList = {
+    "mpg", "jpeg", "tiff", "heic"
 };
 
 

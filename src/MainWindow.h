@@ -4,7 +4,8 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMainWindow>
-#include <QVBoxLayout>
+#include <QGridLayout>
+#include <QComboBox>
 
 #include "CommonEnums.h"
 
@@ -22,6 +23,8 @@ private:
 
     QLineEdit* inputFilePathLineEdit_;
     QLineEdit* outputFolderLineEdit_;
+    QComboBox* convertFileTypeBox_;
+    QLineEdit* resultFilePath_;
 
     FileType inputFileType_ = FileType::UNKNOWN;
 
@@ -30,12 +33,13 @@ private:
     void initConvertSettings();
 
     QString getFilesFolderPath(QString filePath);
-    void updateConvertSettings();
+    void updateFileTypeBox();
 
 private slots:
     void browseFileButtonClicked();
     void inputFilePathEditingFinished();
     void browseFolderButtonClicked();
+    void checkNewConvertIndex();
 
 };
 
