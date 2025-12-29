@@ -6,6 +6,7 @@
 #include <QMainWindow>
 #include <QGridLayout>
 #include <QComboBox>
+#include <QPushButton>
 
 #include "CommonEnums.h"
 
@@ -24,9 +25,9 @@ private:
     QLineEdit* inputFilePathLineEdit_;
     QLineEdit* outputFolderLineEdit_;
     QComboBox* convertFileTypeBox_;
-    QLineEdit* resultFilePath_;
+    QPushButton* convertButton_;
 
-    FileType inputFileType_ = FileType::UNKNOWN;
+    FormatInfo inputFileFormat_;
 
     void initInputFileWidgets();
     void initOutputFileWidgets();
@@ -39,7 +40,6 @@ private slots:
     void browseFileButtonClicked();
     void inputFilePathEditingFinished();
     void browseFolderButtonClicked();
-    void checkNewConvertIndex();
 
 };
 

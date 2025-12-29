@@ -15,49 +15,54 @@ enum class AudioFormats {
     MP3, WAV, AAC, FLAC, OGG, WMA, ALAC_M4A, AIFF
 };
 
-static const QMap<QString, AudioFormats> audioFormatLabels = {
-    { "mp3", AudioFormats::MP3 },
-    { "wav", AudioFormats::WAV },
-    { "aac", AudioFormats::AAC },
-    { "flac", AudioFormats::FLAC },
-    { "ogg", AudioFormats::OGG },
-    { "wma", AudioFormats::WMA },
-    { "m4a", AudioFormats::ALAC_M4A },
-    { "aiff", AudioFormats::AIFF },
-};
-
 enum class VideoFormats {
     MP4, AVI, MKV, MOV, WMV, FLV, WEBM, MPEG, M4V
-};
-
-static const QMap<QString, VideoFormats> videoFormatLabels = {
-    { "mp4", VideoFormats::MP4 },
-    { "avi", VideoFormats::AVI },
-    { "mkv", VideoFormats::MKV },
-    { "mov", VideoFormats::MOV },
-    { "wmv", VideoFormats::WMV },
-    { "flv", VideoFormats::FLV },
-    { "webm", VideoFormats::WEBM },
-    { "mpeg", VideoFormats::MPEG },
-    { "mpg", VideoFormats::MPEG },
-    { "m4v", VideoFormats::M4V }
 };
 
 enum class ImageFormats {
     JPEG, PNG, GIF, BMP, TIFF, HEIF, WEBP, ICO
 };
 
-static const QMap<QString, ImageFormats> imageFormatLabels = {
-    { "jpg", ImageFormats::JPEG },
-    { "jpeg", ImageFormats::JPEG },
-    { "png", ImageFormats::PNG },
-    { "gif", ImageFormats::GIF },
-    { "bmp", ImageFormats::BMP },
-    { "tif", ImageFormats::TIFF },
-    { "tiff", ImageFormats::TIFF },
-    { "heif", ImageFormats::HEIF },
-    { "heic", ImageFormats::HEIF },
-    { "ico", ImageFormats::ICO }
+struct FormatInfo {
+    FileType fileType;
+    int enumValue;
+    QString label;
+};
+
+static QVector<FormatInfo> fileFormats {
+        // AUDIO
+        { FileType::AUDIO, static_cast<int>(AudioFormats::MP3), "mp3" },
+        { FileType::AUDIO, static_cast<int>(AudioFormats::WAV), "wav" },
+        { FileType::AUDIO, static_cast<int>(AudioFormats::AAC), "aac" },
+        { FileType::AUDIO, static_cast<int>(AudioFormats::FLAC), "flac" },
+        { FileType::AUDIO, static_cast<int>(AudioFormats::OGG), "ogg" },
+        { FileType::AUDIO, static_cast<int>(AudioFormats::WMA), "wma" },
+        { FileType::AUDIO, static_cast<int>(AudioFormats::ALAC_M4A), "m4a" },
+        { FileType::AUDIO, static_cast<int>(AudioFormats::AIFF), "aiff" },
+
+        // VIDEO
+        { FileType::VIDEO, static_cast<int>(VideoFormats::MP4), "mp4" },
+        { FileType::VIDEO, static_cast<int>(VideoFormats::AVI), "avi" },
+        { FileType::VIDEO, static_cast<int>(VideoFormats::MKV), "mkv" },
+        { FileType::VIDEO, static_cast<int>(VideoFormats::MOV), "mov" },
+        { FileType::VIDEO, static_cast<int>(VideoFormats::WMV), "wmv" },
+        { FileType::VIDEO, static_cast<int>(VideoFormats::FLV), "flv" },
+        { FileType::VIDEO, static_cast<int>(VideoFormats::WEBM), "webm" },
+        { FileType::VIDEO, static_cast<int>(VideoFormats::MPEG), "mpeg" },
+        { FileType::VIDEO, static_cast<int>(VideoFormats::MPEG), "mpg" },
+        { FileType::VIDEO, static_cast<int>(VideoFormats::M4V), "m4v" },
+
+        // IMAGE
+        { FileType::IMAGE, static_cast<int>(ImageFormats::JPEG), "jpeg" },
+        { FileType::IMAGE, static_cast<int>(ImageFormats::JPEG), "jpg" },
+        { FileType::IMAGE, static_cast<int>(ImageFormats::PNG), "png" },
+        { FileType::IMAGE, static_cast<int>(ImageFormats::GIF), "gif" },
+        { FileType::IMAGE, static_cast<int>(ImageFormats::BMP), "bmp" },
+        { FileType::IMAGE, static_cast<int>(ImageFormats::TIFF), "tif" },
+        { FileType::IMAGE, static_cast<int>(ImageFormats::TIFF), "tiff" },
+        { FileType::IMAGE, static_cast<int>(ImageFormats::HEIF), "heif" },
+        { FileType::IMAGE, static_cast<int>(ImageFormats::HEIF), "heic" },
+        { FileType::IMAGE, static_cast<int>(ImageFormats::ICO), "ico" },
 };
 
 // includes duplicates (multiple forms) in format labels for example jpg and jpeg only jpg is shown

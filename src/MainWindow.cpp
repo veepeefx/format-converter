@@ -5,7 +5,6 @@
 #include <QPushButton>
 #include <QLineEdit>
 #include <QLabel>
-#include <QComboBox>
 
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
@@ -65,17 +64,15 @@ void MainWindow::initConvertSettings()
     convertFileTypeBox_ = new QComboBox();
     convertFileTypeBox_->setEnabled(false);
 
-    connect(convertFileTypeBox_, &QComboBox::currentIndexChanged, this,
-            &MainWindow::checkNewConvertIndex);
-
     mainLayout_->addWidget(fileTypeLabel, mainLayoutRow_, 0);
     mainLayout_->addWidget(convertFileTypeBox_, mainLayoutRow_, 1);
 
     mainLayoutRow_++;
 
-    QPushButton* convertButton = new QPushButton("Convert");
+    convertButton_ = new QPushButton("Convert");
+    convertButton_->setEnabled(false);
     //connect(convertButton, &QPushButton::clicked, this, );
-    mainLayout_->addWidget(convertButton, mainLayoutRow_, 0);
+    mainLayout_->addWidget(convertButton_, mainLayoutRow_, 0);
 }
 
 QString MainWindow::getFilesFolderPath(QString filePath)
@@ -85,36 +82,25 @@ QString MainWindow::getFilesFolderPath(QString filePath)
 
 void MainWindow::updateFileTypeBox()
 {
-    int index = 0;
     convertFileTypeBox_->clear();
-    convertFileTypeBox_->setEnabled(true);
 
-    switch (inputFileType_) {
-        case FileType::AUDIO:
-            for (auto it = audioFormatLabels.begin(); it != audioFormatLabels.end(); ++it) {
-                if (!labelsBlackList.contains(it.key())) {
-                    convertFileTypeBox_->insertItem(index++, it.key());
-                }
-            }
-            break;
-        case FileType::VIDEO:
-            for (auto it = videoFormatLabels.begin(); it != videoFormatLabels.end(); ++it) {
-                if (!labelsBlackList.contains(it.key())) {
-                    convertFileTypeBox_->insertItem(index++, it.key());
-                }
-            }
-            break;
-        case FileType::IMAGE:
-            for (auto it = imageFormatLabels.begin(); it != imageFormatLabels.end(); ++it) {
-                if (!labelsBlackList.contains(it.key())) {
-                    convertFileTypeBox_->insertItem(index++, it.key());
-                }
-            }
-            break;
-        case FileType::UNKNOWN:
-            convertFileTypeBox_->setEnabled(false);
-            break;
+    if (inputFileFormat_.fileType == FileType::UNKNOWN) {
+        convertFileTypeBox_->setEnabled(false);
+        convertButton_->setEnabled(false);
+        return;
     }
+
+    int index = 0;
+    for (const auto& it : fileFormats) {
+        if (it.fileType == inputFileFormat_.fileType
+            && it.enumValue != inputFileFormat_.enumValue
+            && !labelsBlackList.contains(it.label)) {
+            convertFileTypeBox_->insertItem(index++, it.label);
+        }
+    }
+
+    convertFileTypeBox_->setEnabled(true);
+    convertButton_->setEnabled(true);
 }
 
 void MainWindow::inputFilePathEditingFinished()
@@ -122,13 +108,15 @@ void MainWindow::inputFilePathEditingFinished()
     QString filePath = inputFilePathLineEdit_->text();
     outputFolderLineEdit_->setText(getFilesFolderPath(filePath));
 
-    QString extension = filePath.mid(filePath.lastIndexOf('.') + 1);
+    QString extension = filePath.mid(filePath.lastIndexOf('.') + 1).toLower();
 
-    if (audioFormatLabels.contains(extension))          { inputFileType_ = FileType::AUDIO; }
-    else if (videoFormatLabels.contains(extension))     { inputFileType_ = FileType::VIDEO; }
-    else if (imageFormatLabels.contains(extension))     { inputFileType_ = FileType::IMAGE; }
-    else                                                { inputFileType_ = FileType::UNKNOWN; }
-
+    inputFileFormat_.fileType = FileType::UNKNOWN;
+    for (const auto& it : fileFormats) {
+        if (it.label == extension) {
+            inputFileFormat_ = it;
+            break;
+        }
+    }
     updateFileTypeBox();
 }
 
@@ -152,8 +140,3 @@ void MainWindow::browseFolderButtonClicked()
         outputFolderLineEdit_->setText(folderPath);
     }
 }
-
-void MainWindow::checkNewConvertIndex()
-{
-}
-
