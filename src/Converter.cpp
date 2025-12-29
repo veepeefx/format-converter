@@ -5,15 +5,35 @@
 
 bool Converter::runConverter(const QString& inputFilePath, const QString& outputFilePath)
 {
+    QStringList args;
+    args << "-y" << "-i"
+            << inputFilePath
+            << outputFilePath;
+
+    return runFFmpeg(args);
+}
+
+bool Converter::runMetaDataRemover(const QString& inputFilePath, const QString& outputFilePath)
+{
+    // NOT TESTED
+    QStringList args;
+    args << "-i" << inputFilePath
+         << "-map_metadata" << "-1"
+         << "-c:v" << "copy" << outputFilePath;
+
+    return runFFmpeg(args);
+}
+
+bool Converter::runFFmpeg(QStringList args)
+{
     QProcess ffmpeg;
     QString program = "ffmpeg";
-    QStringList args;
-    args << "-y" << "-i" << inputFilePath << outputFilePath;
 
     QObject::connect(&ffmpeg, &QProcess::readyReadStandardError, [&]() {
         QByteArray data = ffmpeg.readAllStandardError();
         std::cerr << data.toStdString();
     });
+
     ffmpeg.start(program, args);
 
     if (!ffmpeg.waitForStarted()) {
@@ -26,9 +46,6 @@ bool Converter::runConverter(const QString& inputFilePath, const QString& output
         ffmpeg.kill();
         return false;
     }
-
-    QByteArray output = ffmpeg.readAllStandardOutput();
-    std::cout << output.toStdString() << std::endl;
 
     return true;
 }
