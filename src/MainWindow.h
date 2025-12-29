@@ -32,14 +32,13 @@ private:
     void initInputFileWidgets();
     void initOutputFileWidgets();
     void initConvertSettings();
-
-    QString getFilesFolderPath(QString filePath);
     void updateFileTypeBox();
 
 private slots:
     void browseFileButtonClicked();
     void inputFilePathEditingFinished();
     void browseFolderButtonClicked();
+    void convertButtonClicked();
 
 };
 

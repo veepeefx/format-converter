@@ -16,7 +16,9 @@ find_package(Qt6 COMPONENTS
 add_executable(format-converter src/main.cpp
         src/MainWindow.cpp
         src/MainWindow.h
-        src/CommonEnums.h)
+        src/CommonEnums.h
+        src/Converter.cpp
+        src/Converter.h)
 
 target_link_libraries(format-converter
         Qt::Core

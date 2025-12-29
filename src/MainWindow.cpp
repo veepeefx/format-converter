@@ -1,10 +1,12 @@
 #include "MainWindow.h"
 #include "CommonEnums.h"
+#include "Converter.h"
 
 #include <QFileDialog>
 #include <QPushButton>
 #include <QLineEdit>
 #include <QLabel>
+#include <QMessageBox>
 
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
@@ -71,13 +73,8 @@ void MainWindow::initConvertSettings()
 
     convertButton_ = new QPushButton("Convert");
     convertButton_->setEnabled(false);
-    //connect(convertButton, &QPushButton::clicked, this, );
+    connect(convertButton_, &QPushButton::clicked, this, &MainWindow::convertButtonClicked);
     mainLayout_->addWidget(convertButton_, mainLayoutRow_, 0);
-}
-
-QString MainWindow::getFilesFolderPath(QString filePath)
-{
-    return filePath.left(filePath.lastIndexOf('/') + 1);
 }
 
 void MainWindow::updateFileTypeBox()
@@ -106,9 +103,9 @@ void MainWindow::updateFileTypeBox()
 void MainWindow::inputFilePathEditingFinished()
 {
     QString filePath = inputFilePathLineEdit_->text();
-    outputFolderLineEdit_->setText(getFilesFolderPath(filePath));
+    outputFolderLineEdit_->setText(QFileInfo(filePath).path());
 
-    QString extension = filePath.mid(filePath.lastIndexOf('.') + 1).toLower();
+    QString extension = QFileInfo(filePath).suffix();
 
     inputFileFormat_.fileType = FileType::UNKNOWN;
     for (const auto& it : fileFormats) {
@@ -139,4 +136,24 @@ void MainWindow::browseFolderButtonClicked()
     if (!folderPath.isEmpty()) {
         outputFolderLineEdit_->setText(folderPath);
     }
+}
+
+void MainWindow::convertButtonClicked()
+{
+    QString inputFilePath = inputFilePathLineEdit_->text();
+    QString outputFolderPath = outputFolderLineEdit_->text();
+    QString fileName = QFileInfo(inputFilePath).completeBaseName();
+    QString extension = convertFileTypeBox_->currentText().toLower();
+    QString outputFilePath = QFileInfo(outputFolderPath, fileName + "." + extension).absoluteFilePath();
+
+    if (QFileInfo(outputFilePath).exists()) {
+        QMessageBox::StandardButton overwrite;
+        overwrite = QMessageBox::question(nullptr, "File Exists",
+            "The file already exists. Overwrite?", QMessageBox::Yes | QMessageBox::No);
+        if (overwrite == QMessageBox::No) {
+            return;
+        }
+    }
+
+    Converter::runConverter(inputFilePath, outputFilePath);
 }
