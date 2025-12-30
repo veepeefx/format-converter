@@ -15,11 +15,12 @@ bool Converter::runConverter(const QString& inputFilePath, const QString& output
 
 bool Converter::runMetaDataRemover(const QString& inputFilePath, const QString& outputFilePath)
 {
-    // NOT TESTED
     QStringList args;
-    args << "-i" << inputFilePath
+    args << "-y" << "-i" << inputFilePath
          << "-map_metadata" << "-1"
-         << "-c:v" << "copy" << outputFilePath;
+         << "-frames:v" << "1"
+         << "-q:v" << "1"
+            << outputFilePath;
 
     return runFFmpeg(args);
 }
