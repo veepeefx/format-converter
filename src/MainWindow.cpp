@@ -220,7 +220,7 @@ void MainWindow::convertButtonClicked()
         }
     }
 
-    Converter::runConverter(inputFilePath, outputFilePath);
+    Converter::runConverter(inputFilePath, outputFilePath, inputFileFormat_);
 }
 
 void MainWindow::removeButtonClicked()
@@ -236,5 +236,5 @@ void MainWindow::removeButtonClicked()
         return;
     }
 
-    Converter::runMetaDataRemover(filePath, filePath);
+    Converter::runMetaDataRemover(filePath, filePath, inputFileFormat_);
 }
