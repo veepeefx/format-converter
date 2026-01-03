@@ -252,8 +252,7 @@ void MainWindow::convertButtonClicked()
         }
     }
 
-    Converter::runConverter(inputFilePath, outputFilePath, inputFileFormat_,
-        [&](int p) { updateProgressBar(p); });
+    Converter::runConverter(inputFilePath, outputFilePath, [&](int p) { updateProgressBar(p); });
 }
 
 void MainWindow::removeButtonClicked()
@@ -270,8 +269,7 @@ void MainWindow::removeButtonClicked()
         return;
     }
 
-    Converter::runMetaDataRemover(filePath, filePath, inputFileFormat_,
-        [&](int p) { updateProgressBar(p); });
+    Converter::runMetaDataRemover(filePath, filePath, [&](int p) { updateProgressBar(p); });
 }
 
 void MainWindow::convertFileTypeChanged()

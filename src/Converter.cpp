@@ -1,6 +1,7 @@
 #include "Converter.h"
 
 #include <iostream>
+#include <QFileInfo>
 #include <QProcess>
 #include <QRegularExpression>
 
@@ -8,22 +9,23 @@
 
 bool Converter::runConverter(const QString& inputFilePath,
                              const QString& outputFilePath,
-                             const FormatInfo& inputFormat,
                              std::function<void(int)> progressCallBack)
 {
+    FormatInfo outputFormat = getOutputFormat(outputFilePath);
+
     QStringList args;
     args << "-y" << "-i" << inputFilePath;
 
     // building arguments depending on filetype and format
-    switch (inputFormat.fileType) {
+    switch (outputFormat.fileType) {
         case FileType::AUDIO:
-            updateAudioArgs(args, inputFormat.enumValue);
+            updateAudioArgs(args, outputFormat.enumValue);
             break;
         case FileType::VIDEO:
-            updateVideoArgs(args, inputFormat.enumValue);
+            updateVideoArgs(args, outputFormat.enumValue);
             break;
         case FileType::IMAGE:
-            updateImageArgs(args, inputFormat.enumValue);
+            updateImageArgs(args, outputFormat.enumValue);
             break;
         case FileType::UNKNOWN:
             return false;
@@ -35,23 +37,22 @@ bool Converter::runConverter(const QString& inputFilePath,
 
 bool Converter::runMetaDataRemover(const QString& inputFilePath,
                                    const QString& outputFilePath,
-                                   const FormatInfo& inputFormat,
                                    std::function<void(int)> progressCallBack)
 {
-    QStringList args;
+    FormatInfo outputFormat = getOutputFormat(outputFilePath);
 
-    // building arguments depending on filetype
+    QStringList args;
     args << "-y" << "-i" << inputFilePath
          << "-map_metadata" << "-1";
 
-    switch (inputFormat.fileType) {
+    switch (outputFormat.fileType) {
         case FileType::AUDIO:
         case FileType::VIDEO:
             args << "-c" << "copy";
             break;
         case FileType::IMAGE:
             // JPEG need re encoding as it is lossy
-            if (static_cast<ImageFormats>(inputFormat.enumValue) == ImageFormats::JPEG) {
+            if (static_cast<ImageFormats>(outputFormat.enumValue) == ImageFormats::JPEG) {
                 args << "-frames:v" << "1"
                      << "-q:v" << "1";
             }
@@ -112,6 +113,17 @@ bool Converter::runFFmpeg(QStringList args, std::function<void(int)> progressCal
 
     progressCallBack(100);
     return true;
+}
+
+FormatInfo Converter::getOutputFormat(const QString& outputFilePath)
+{
+    QString suffix = QFileInfo(outputFilePath).suffix();
+    for (const FormatInfo& it : fileFormats) {
+        if (it.label == suffix) {
+            // always finds correct it as only supported suffixes are given previously
+            return it;
+        }
+    }
 }
 
 void Converter::updateAudioArgs(QStringList &args, const int &enumValue)
