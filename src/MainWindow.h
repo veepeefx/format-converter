@@ -7,6 +7,7 @@
 #include <QGridLayout>
 #include <QComboBox>
 #include <QPushButton>
+#include <QProgressBar>
 
 #include "CommonEnums.h"
 
@@ -28,6 +29,8 @@ private:
     QLineEdit* outputFolderLineEdit_;
     QComboBox* convertFileTypeBox_;
     QPushButton* convertButton_;
+    QProgressBar* progressBar_;
+    QLabel* progressLabel_;
 
     FormatInfo inputFileFormat_;
 
@@ -40,12 +43,16 @@ private:
     // changes all child widgets enabled recursively to chosen boolean
     void enableLayoutWidgets(QLayout* layout, bool enable);
 
+    void updateProgressBar(int progress);
+    void resetProgressBar();
+
 private slots:
     void browseFileButtonClicked();
     void inputFilePathEditingFinished();
     void browseFolderButtonClicked();
     void convertButtonClicked();
     void removeButtonClicked();
+    void convertFileTypeChanged();
 
 };
 

@@ -7,6 +7,7 @@
 #include <QLineEdit>
 #include <QLabel>
 #include <QMessageBox>
+#include <QProgressBar>
 
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
@@ -31,6 +32,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     mainLayout->addLayout(midLayout_);
 
     enableLayoutWidgets(midLayout_, false);
+
+    progressBar_ = new QProgressBar();
+    progressBar_->setRange(0, 100);
+    progressLabel_ = new QLabel();
+    progressLabel_->setAlignment(Qt::AlignCenter);
+
+    resetProgressBar();
+    mainLayout->addWidget(progressBar_);
+    mainLayout->addWidget(progressLabel_);
 
     this->setWindowTitle("Format Converter");
     this->resize(800, 600);
@@ -86,6 +96,7 @@ void MainWindow::initConvertSettings()
 
     QLabel* fileTypeLabel = new QLabel("Select new extension format: ");
     convertFileTypeBox_ = new QComboBox();
+    connect(convertFileTypeBox_, &QComboBox::currentIndexChanged, this, &MainWindow::convertFileTypeChanged);
 
     convertLayout->addWidget(fileTypeLabel, row, 0);
     convertLayout->addWidget(convertFileTypeBox_, row, 1);
@@ -126,9 +137,6 @@ void MainWindow::updateFileTypeBox()
 
     if (inputFileFormat_.fileType == FileType::UNKNOWN) {
         enableLayoutWidgets(midLayout_, false);
-
-        QMessageBox::warning(this, "File type not supported",
-                            "File type is not supported or recogniced!");
         return;
     }
 
@@ -164,6 +172,25 @@ void MainWindow::enableLayoutWidgets(QLayout *layout, bool enable)
     }
 }
 
+void MainWindow::updateProgressBar(int progress)
+{
+    progressBar_->setValue(progress);
+
+    switch (progress) {
+        case 100:
+            progressLabel_->setText("Done!");
+            break;
+        default:
+            progressLabel_->setText("Processing...");
+            break;
+    }
+}
+
+void MainWindow::resetProgressBar()
+{
+    progressLabel_->setText("Waiting for new process");
+    progressBar_->setValue(0);
+}
 
 void MainWindow::inputFilePathEditingFinished()
 {
@@ -180,6 +207,7 @@ void MainWindow::inputFilePathEditingFinished()
         }
     }
     updateFileTypeBox();
+    resetProgressBar();
 }
 
 void MainWindow::browseFileButtonClicked()
@@ -191,6 +219,8 @@ void MainWindow::browseFileButtonClicked()
         inputFilePathLineEdit_->setText(filePath);
         inputFilePathEditingFinished();
     }
+
+    resetProgressBar();
 }
 
 void MainWindow::browseFolderButtonClicked()
@@ -201,6 +231,8 @@ void MainWindow::browseFolderButtonClicked()
     if (!folderPath.isEmpty()) {
         outputFolderLineEdit_->setText(folderPath);
     }
+
+    resetProgressBar();
 }
 
 void MainWindow::convertButtonClicked()
@@ -220,7 +252,8 @@ void MainWindow::convertButtonClicked()
         }
     }
 
-    Converter::runConverter(inputFilePath, outputFilePath, inputFileFormat_);
+    Converter::runConverter(inputFilePath, outputFilePath, inputFileFormat_,
+        [&](int p) { updateProgressBar(p); });
 }
 
 void MainWindow::removeButtonClicked()
@@ -229,12 +262,19 @@ void MainWindow::removeButtonClicked()
     QString filePath = inputFilePathLineEdit_->text();
 
     QMessageBox::StandardButton replace;
-    replace = QMessageBox::question(nullptr, "Overwrites old file", "THIS OPERATION OVERWRITES OLD FILE WITH FILE THAT DOESN'T CONTAIN METADATA. DO YOU WANT TO PROCEED?",
+    replace = QMessageBox::question(nullptr, "Overwrites old file",
+        "THIS OPERATION OVERWRITES OLD FILE WITH FILE THAT DOESN'T CONTAIN METADATA. DO YOU WANT TO PROCEED?",
         QMessageBox::Yes | QMessageBox::No);
 
     if (replace == QMessageBox::No) {
         return;
     }
 
-    Converter::runMetaDataRemover(filePath, filePath, inputFileFormat_);
+    Converter::runMetaDataRemover(filePath, filePath, inputFileFormat_,
+        [&](int p) { updateProgressBar(p); });
+}
+
+void MainWindow::convertFileTypeChanged()
+{
+    resetProgressBar();
 }

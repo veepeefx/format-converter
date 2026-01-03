@@ -2,12 +2,14 @@
 
 #include <iostream>
 #include <QProcess>
+#include <QRegularExpression>
 
 #include "CommonEnums.h"
 
 bool Converter::runConverter(const QString& inputFilePath,
                              const QString& outputFilePath,
-                             const FormatInfo& inputFormat)
+                             const FormatInfo& inputFormat,
+                             std::function<void(int)> progressCallBack)
 {
     QStringList args;
     args << "-y" << "-i" << inputFilePath;
@@ -28,12 +30,13 @@ bool Converter::runConverter(const QString& inputFilePath,
     }
 
     args << outputFilePath;
-    return runFFmpeg(args);
+    return runFFmpeg(args, progressCallBack);
 }
 
 bool Converter::runMetaDataRemover(const QString& inputFilePath,
                                    const QString& outputFilePath,
-                                   const FormatInfo& inputFormat)
+                                   const FormatInfo& inputFormat,
+                                   std::function<void(int)> progressCallBack)
 {
     QStringList args;
 
@@ -59,17 +62,39 @@ bool Converter::runMetaDataRemover(const QString& inputFilePath,
     }
 
     args << outputFilePath;
-    return runFFmpeg(args);
+    return runFFmpeg(args, progressCallBack);
 }
 
-bool Converter::runFFmpeg(QStringList args)
+bool Converter::runFFmpeg(QStringList args, std::function<void(int)> progressCallBack)
 {
     QProcess ffmpeg;
     QString program = "ffmpeg";
 
+    double totalDuration = 0;
     QObject::connect(&ffmpeg, &QProcess::readyReadStandardError, [&]() {
-        QByteArray data = ffmpeg.readAllStandardError();
-        std::cerr << data.toStdString();
+        const QString text = ffmpeg.readAllStandardError();
+
+        // get totalDuration
+        if (totalDuration == 0) {
+            QRegularExpression reDuration("Duration: (\\d+):(\\d+):(\\d+\\.\\d+)");
+            QRegularExpressionMatch match = reDuration.match(text);
+            if (match.hasMatch()){
+                totalDuration = match.captured(1).toInt() * 3600
+                                + match.captured(2).toInt() * 60
+                                + match.captured(3).toDouble();
+            }
+        }
+
+        // read current
+        QRegularExpression reTime("time=(\\d+):(\\d+):(\\d+\\.\\d+)");
+        QRegularExpressionMatch match = reTime.match(text);
+        if (match.hasMatch() && totalDuration > 0) {
+            double current = match.captured(1).toInt() * 3600
+                            + match.captured(2).toInt() * 60
+                            + match.captured(3).toDouble();
+            int progress = int((current / totalDuration) * 100);
+            progressCallBack(progress);
+        }
     });
 
     ffmpeg.start(program, args);
@@ -79,12 +104,13 @@ bool Converter::runFFmpeg(QStringList args)
         return false;
     }
 
-    if (!ffmpeg.waitForFinished(20000)) {
+    if (!ffmpeg.waitForFinished(-1)) {
         std::cerr << "FFmpeg timed out" << std::endl;
         ffmpeg.kill();
         return false;
     }
 
+    progressCallBack(100);
     return true;
 }
 
