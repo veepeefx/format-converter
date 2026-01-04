@@ -7,9 +7,11 @@
 
 #include "CommonEnums.h"
 
-bool Converter::runConverter(const QString& inputFilePath,
-                             const QString& outputFilePath,
-                             std::function<void(int)> progressCallBack)
+Converter::Converter(QObject* parent) : QObject(parent), totalDuration_(0) {}
+
+Converter::~Converter() {}
+
+void Converter::runConverter(const QString& inputFilePath, const QString& outputFilePath)
 {
     FormatInfo outputFormat = getOutputFormat(outputFilePath);
 
@@ -28,16 +30,15 @@ bool Converter::runConverter(const QString& inputFilePath,
             updateImageArgs(args, outputFormat.enumValue);
             break;
         case FileType::UNKNOWN:
-            return false;
+            emit errorOccured("File type unknown");
+            return;
     }
 
     args << outputFilePath;
-    return runFFmpeg(args, progressCallBack);
+    runFFmpeg(args);
 }
 
-bool Converter::runMetaDataRemover(const QString& inputFilePath,
-                                   const QString& outputFilePath,
-                                   std::function<void(int)> progressCallBack)
+void Converter::runMetaDataRemover(const QString& inputFilePath, const QString& outputFilePath)
 {
     FormatInfo outputFormat = getOutputFormat(outputFilePath);
 
@@ -59,60 +60,36 @@ bool Converter::runMetaDataRemover(const QString& inputFilePath,
             // other image types are lossless so FFmpeg makes lossless copy it self
             break;
         case FileType::UNKNOWN:
-            return false;
+            errorOccured("File type unknown");
+            return;
     }
 
     args << outputFilePath;
-    return runFFmpeg(args, progressCallBack);
+    runFFmpeg(args);
 }
 
-bool Converter::runFFmpeg(QStringList args, std::function<void(int)> progressCallBack)
+void Converter::runFFmpeg(const QStringList& args)
 {
-    QProcess ffmpeg;
-    QString program = "ffmpeg";
+    emit progressChanged(0);
+    QProcess* ffmpeg = new QProcess(this);
 
-    double totalDuration = 0;
-    QObject::connect(&ffmpeg, &QProcess::readyReadStandardError, [&]() {
-        const QString text = ffmpeg.readAllStandardError();
-
-        // get totalDuration
-        if (totalDuration == 0) {
-            QRegularExpression reDuration("Duration: (\\d+):(\\d+):(\\d+\\.\\d+)");
-            QRegularExpressionMatch match = reDuration.match(text);
-            if (match.hasMatch()){
-                totalDuration = match.captured(1).toInt() * 3600
-                                + match.captured(2).toInt() * 60
-                                + match.captured(3).toDouble();
-            }
-        }
-
-        // read current
-        QRegularExpression reTime("time=(\\d+):(\\d+):(\\d+\\.\\d+)");
-        QRegularExpressionMatch match = reTime.match(text);
-        if (match.hasMatch() && totalDuration > 0) {
-            double current = match.captured(1).toInt() * 3600
-                            + match.captured(2).toInt() * 60
-                            + match.captured(3).toDouble();
-            int progress = int((current / totalDuration) * 100);
-            progressCallBack(progress);
-        }
+    // connecting progress updates
+    totalDuration_ = 0;
+    connect(ffmpeg, &QProcess::readyReadStandardError, [ffmpeg, this]() {
+        handleProgress(ffmpeg->readAllStandardError());
     });
 
-    ffmpeg.start(program, args);
+    // emitting error signal
+    connect(ffmpeg, &QProcess::errorOccurred, [this]() {
+        emit errorOccured("During running ffmpeg!");
+    });
 
-    if (!ffmpeg.waitForStarted()) {
-        std::cerr << "FFmpeg failed to start" << std::endl;
-        return false;
-    }
+    // emitting finished signal
+    connect(ffmpeg, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [this] () {
+        emit progressChanged(100);
+    });
 
-    if (!ffmpeg.waitForFinished(-1)) {
-        std::cerr << "FFmpeg timed out" << std::endl;
-        ffmpeg.kill();
-        return false;
-    }
-
-    progressCallBack(100);
-    return true;
+    ffmpeg->start("ffmpeg", args);
 }
 
 FormatInfo Converter::getOutputFormat(const QString& outputFilePath)
@@ -124,6 +101,7 @@ FormatInfo Converter::getOutputFormat(const QString& outputFilePath)
             return it;
         }
     }
+    return {};
 }
 
 void Converter::updateAudioArgs(QStringList &args, const int &enumValue)
@@ -231,5 +209,30 @@ void Converter::updateImageArgs(QStringList &args, const int &enumValue)
                  << "-lossless" << "1";
             break;
         default: break;
+    }
+}
+
+void Converter::handleProgress(const QString& text)
+{
+    std::cerr << "JEE";
+    if (totalDuration_ == 0) {
+        QRegularExpression reDuration("Duration: (\\d+):(\\d+):(\\d+\\.\\d+)");
+        QRegularExpressionMatch match = reDuration.match(text);
+        if (match.hasMatch()){
+            totalDuration_ = match.captured(1).toInt() * 3600
+                            + match.captured(2).toInt() * 60
+                            + match.captured(3).toDouble();
+        }
+    }
+
+    // read current
+    QRegularExpression reTime("time=(\\d+):(\\d+):(\\d+\\.\\d+)");
+    QRegularExpressionMatch match = reTime.match(text);
+    if (match.hasMatch() && totalDuration_ > 0) {
+        double current = match.captured(1).toInt() * 3600
+                        + match.captured(2).toInt() * 60
+                        + match.captured(3).toDouble();
+        int progress = int((current / totalDuration_) * 100);
+        emit progressChanged(progress);
     }
 }

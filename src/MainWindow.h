@@ -10,17 +10,21 @@
 #include <QProgressBar>
 
 #include "CommonEnums.h"
+#include "Converter.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
 
-    explicit MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(Converter* converter, QWidget *parent = nullptr);
 
     ~MainWindow() override;
 
 private:
+
+    Converter* converter_;
+
     int mainLayoutRow_ = 0;
     QGridLayout *topLayout_;
     QHBoxLayout* midLayout_;
@@ -43,7 +47,6 @@ private:
     // changes all child widgets enabled recursively to chosen boolean
     void enableLayoutWidgets(QLayout* layout, bool enable);
 
-    void updateProgressBar(int progress);
     void resetProgressBar();
 
 private slots:
@@ -54,6 +57,8 @@ private slots:
     void removeButtonClicked();
     void convertFileTypeChanged();
 
+    void updateProgressBar(const int& progress);
+    void handleError(const QString& message);
 };
 
 

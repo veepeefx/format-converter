@@ -10,7 +10,7 @@
 #include <QProgressBar>
 
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
+MainWindow::MainWindow(Converter* converter, QWidget *parent) : converter_(converter), QMainWindow(parent)
 {
     QWidget* central = new QWidget(this);
     setCentralWidget(central);
@@ -41,6 +41,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     resetProgressBar();
     mainLayout->addWidget(progressBar_);
     mainLayout->addWidget(progressLabel_);
+
+    connect(converter_, &Converter::progressChanged, this, &MainWindow::updateProgressBar);
+    connect(converter_, &Converter::errorOccured, this, &MainWindow::handleError);
 
     this->setWindowTitle("Format Converter");
     this->resize(800, 600);
@@ -172,20 +175,6 @@ void MainWindow::enableLayoutWidgets(QLayout *layout, bool enable)
     }
 }
 
-void MainWindow::updateProgressBar(int progress)
-{
-    progressBar_->setValue(progress);
-
-    switch (progress) {
-        case 100:
-            progressLabel_->setText("Done!");
-            break;
-        default:
-            progressLabel_->setText("Processing...");
-            break;
-    }
-}
-
 void MainWindow::resetProgressBar()
 {
     progressLabel_->setText("Waiting for new process");
@@ -252,7 +241,7 @@ void MainWindow::convertButtonClicked()
         }
     }
 
-    Converter::runConverter(inputFilePath, outputFilePath, [&](int p) { updateProgressBar(p); });
+    converter_->runConverter(inputFilePath, outputFilePath);
 }
 
 void MainWindow::removeButtonClicked()
@@ -269,10 +258,27 @@ void MainWindow::removeButtonClicked()
         return;
     }
 
-    Converter::runMetaDataRemover(filePath, filePath, [&](int p) { updateProgressBar(p); });
+    converter_->runMetaDataRemover(filePath, filePath);
 }
 
 void MainWindow::convertFileTypeChanged()
 {
     resetProgressBar();
+}
+
+void MainWindow::updateProgressBar(const int& progress)
+{
+    if (progress == 0) {
+        progressLabel_->setText("Starting...");
+    } else if (progress >= 100) {
+        progressLabel_->setText("Done!");
+    } else {
+        progressLabel_->setText("Processing...");
+    }
+    progressBar_->setValue(progress);
+}
+
+void MainWindow::handleError(const QString &message)
+{
+    progressLabel_->setText("ERROR! " + message);
 }

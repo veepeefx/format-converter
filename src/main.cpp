@@ -1,5 +1,7 @@
 #include <QApplication>
 #include <QMessageBox>
+
+#include "Converter.h"
 #include "MainWindow.h"
 
 
@@ -26,7 +28,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    MainWindow w;
+    Converter c;
+
+    MainWindow w(&c);
     w.show();
 
     return QApplication::exec();

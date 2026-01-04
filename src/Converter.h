@@ -1,31 +1,37 @@
 #ifndef FORMAT_CONVERTER_CONVERTER_H
 #define FORMAT_CONVERTER_CONVERTER_H
+#include <QObject>
 #include <QString>
 
 #include "CommonEnums.h"
 
-class Converter {
+class Converter : public QObject {
+    Q_OBJECT
+
 public:
 
-    static bool runConverter(const QString& inputFilePath,
-                             const QString& outputFilePath,
-                             std::function<void(int)> progressCallBack);
+    Converter(QObject* parent = nullptr);
+    ~Converter();
 
-    static bool runMetaDataRemover(const QString& inputFilePath,
-                                   const QString& outputFilePath,
-                                   std::function<void(int)> progressCallBack);
+    void runConverter(const QString& inputFilePath, const QString& outputFilePath);
+    void runMetaDataRemover(const QString& inputFilePath, const QString& outputFilePath);
 
 private:
 
-    static bool runFFmpeg(QStringList args, std::function<void(int)> progressCallBack);
-    static void updateVideoArgs(QStringList& args, const int& enumValue);
-    static void updateAudioArgs(QStringList& args, const int& enumValue);
-    static void updateImageArgs(QStringList& args, const int& enumValue);
+    double totalDuration_;
 
-    static FormatInfo getOutputFormat(const QString& outputFilePath);
+    void runFFmpeg(const QStringList& args);
+    void updateVideoArgs(QStringList& args, const int& enumValue);
+    void updateAudioArgs(QStringList& args, const int& enumValue);
+    void updateImageArgs(QStringList& args, const int& enumValue);
+    void handleProgress(const QString& text);
 
-    Converter() = delete;
-    ~Converter() = delete;
+    FormatInfo getOutputFormat(const QString& outputFilePath);
+
+signals:
+    void progressChanged(const int& value);
+    void errorOccured(const QString& errorMessage);
+
 };
 
 
