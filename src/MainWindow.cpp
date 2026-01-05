@@ -1,4 +1,7 @@
 #include "MainWindow.h"
+
+#include <iostream>
+
 #include "CommonEnums.h"
 #include "Converter.h"
 
@@ -15,78 +18,89 @@ MainWindow::MainWindow(Converter* converter, QWidget *parent) : converter_(conve
     QWidget* central = new QWidget(this);
     setCentralWidget(central);
 
-    topLayout_ = new QGridLayout();
+    mainLayout_ = new QVBoxLayout(central);
+    initFilePathWidgets();
+    initConvertToolWidgets();
+    initProgressIndicator();
 
-    initInputFileWidgets();
-    initOutputFileWidgets();
-
-    midLayout_ = new QHBoxLayout();
-
-    initConvertSettings();
-    initMetaDataRemoverSettings();
-
-    QVBoxLayout* mainLayout = new QVBoxLayout(central);
-    mainLayout->setAlignment(Qt::AlignCenter);
-    mainLayout->addLayout(topLayout_);
-    mainLayout->addSpacerItem(new QSpacerItem(20, 20));
-    mainLayout->addLayout(midLayout_);
-
-    enableLayoutWidgets(midLayout_, false);
-
-    progressBar_ = new QProgressBar();
-    progressBar_->setRange(0, 100);
-    progressLabel_ = new QLabel();
-    progressLabel_->setAlignment(Qt::AlignCenter);
-
-    resetProgressBar();
-    mainLayout->addWidget(progressBar_);
-    mainLayout->addWidget(progressLabel_);
-
-    connect(converter_, &Converter::progressChanged, this, &MainWindow::updateProgressBar);
-    connect(converter_, &Converter::errorOccured, this, &MainWindow::handleError);
-
+    mainLayout_->setAlignment(Qt::AlignCenter);
     this->setWindowTitle("Format Converter");
     this->resize(800, 600);
 }
 
 MainWindow::~MainWindow() {}
 
-void MainWindow::initInputFileWidgets()
+void MainWindow::initFilePathWidgets()
+{
+    QGridLayout* layout = new QGridLayout();
+
+    int row = 0;
+    initInput(*layout, row);
+    initOutput(*layout, row);
+
+    mainLayout_->addLayout(layout);
+    mainLayout_->addSpacerItem(new QSpacerItem(20, 20));
+}
+
+void MainWindow::initInput(QGridLayout& layout, int& rowIndex)
 {
     QLabel* filePathLabel = new QLabel("Selected file: ");
-    inputFilePathLineEdit_ = new QLineEdit();
-    connect(inputFilePathLineEdit_, &QLineEdit::editingFinished, this,
+    iFilePathLE_ = new QLineEdit();
+    connect(iFilePathLE_, &QLineEdit::editingFinished, this,
             &MainWindow::inputFilePathEditingFinished);
 
     QPushButton* browseFilesButton = new QPushButton("Browse");
     connect(browseFilesButton, &QPushButton::clicked, this,
             &MainWindow::browseFileButtonClicked);
 
-    topLayout_->addWidget(filePathLabel, mainLayoutRow_, 0);
-    topLayout_->addWidget(inputFilePathLineEdit_, mainLayoutRow_, 1);
-    topLayout_->addWidget(browseFilesButton,  mainLayoutRow_, 2);
+    layout.addWidget(filePathLabel, rowIndex, 0);
+    layout.addWidget(iFilePathLE_, rowIndex, 1);
+    layout.addWidget(browseFilesButton,  rowIndex, 2);
 
-    mainLayoutRow_++;
+    rowIndex++;
 }
 
-void MainWindow::initOutputFileWidgets()
+void MainWindow::initOutput(QGridLayout& layout, int& rowIndex)
 {
     QLabel* folderPathLabel = new QLabel("Output folder: ");
-    outputFolderLineEdit_ = new QLineEdit();
+    oFolderPathLE_ = new QLineEdit();
     QPushButton* browseFolderButton = new QPushButton("Browse");
     connect(browseFolderButton, &QPushButton::clicked, this,
             &MainWindow::browseFolderButtonClicked);
 
-    topLayout_->addWidget(folderPathLabel, mainLayoutRow_, 0);
-    topLayout_->addWidget(outputFolderLineEdit_, mainLayoutRow_, 1);
-    topLayout_->addWidget(browseFolderButton, mainLayoutRow_, 2);
+    layout.addWidget(folderPathLabel, rowIndex, 0);
+    layout.addWidget(oFolderPathLE_, rowIndex, 1);
+    layout.addWidget(browseFolderButton, rowIndex, 2);
 
-    mainLayoutRow_++;
+    rowIndex++;
+
+    QLabel* fileName = new QLabel("Output file name: ");
+    oFileNameLE_ = new QLineEdit();
+
+    layout.addWidget(fileName, rowIndex, 0);
+    layout.addWidget(oFileNameLE_, rowIndex, 1);
 }
 
-void MainWindow::initConvertSettings()
+void MainWindow::initConvertToolWidgets()
+{
+    QHBoxLayout* layout = new QHBoxLayout();
+    initConvertSettings(*layout);
+    initMetaDataRemoverSettings(*layout);
+
+    mainLayout_->addLayout(layout);
+    mainLayout_->addSpacerItem(new QSpacerItem(20, 20));
+
+    connect(this, &MainWindow::enableConversionSettings, this, [layout](bool enable) {
+        enableLayoutWidgets(layout, enable);
+    });
+
+    emit enableConversionSettings(false);
+}
+
+void MainWindow::initConvertSettings(QHBoxLayout& layout)
 {
     QGridLayout* convertLayout = new QGridLayout();
+    convertLayout->setContentsMargins(10, 0, 10, 0);
     convertLayout->setAlignment(Qt::AlignTop);
     int row = 0;
 
@@ -98,24 +112,25 @@ void MainWindow::initConvertSettings()
     row++;
 
     QLabel* fileTypeLabel = new QLabel("Select new extension format: ");
-    convertFileTypeBox_ = new QComboBox();
-    connect(convertFileTypeBox_, &QComboBox::currentIndexChanged, this, &MainWindow::convertFileTypeChanged);
+    oFileTypeCB_ = new QComboBox();
+    connect(oFileTypeCB_, &QComboBox::currentIndexChanged, this, &MainWindow::convertFileTypeChanged);
 
     convertLayout->addWidget(fileTypeLabel, row, 0);
-    convertLayout->addWidget(convertFileTypeBox_, row, 1);
+    convertLayout->addWidget(oFileTypeCB_, row, 1);
 
     row++;
 
-    convertButton_ = new QPushButton("Convert");
-    connect(convertButton_, &QPushButton::clicked, this, &MainWindow::convertButtonClicked);
-    convertLayout->addWidget(convertButton_, row, 0, 1, 2);
+    QPushButton* convertButton = new QPushButton("Convert");
+    connect(convertButton, &QPushButton::clicked, this, &MainWindow::convertButtonClicked);
+    convertLayout->addWidget(convertButton, row, 0, 1, 2);
 
-    midLayout_->addLayout(convertLayout);
+    layout.addLayout(convertLayout);
 }
 
-void MainWindow::initMetaDataRemoverSettings()
+void MainWindow::initMetaDataRemoverSettings(QHBoxLayout& layout)
 {
     QGridLayout* metaDataLayout = new QGridLayout();
+    metaDataLayout->setContentsMargins(10, 0, 10, 0);
     metaDataLayout->setAlignment(Qt::AlignTop);
     int row = 0;
 
@@ -130,29 +145,63 @@ void MainWindow::initMetaDataRemoverSettings()
     metaDataLayout->addWidget(removeButton, row, 0, 1, 2);
     connect(removeButton, &QPushButton::clicked, this, &MainWindow::removeButtonClicked);
 
-    midLayout_->addLayout(metaDataLayout);
+    layout.addLayout(metaDataLayout);
 }
 
-
-void MainWindow::updateFileTypeBox()
+void MainWindow::initProgressIndicator()
 {
-    convertFileTypeBox_->clear();
+    QProgressBar* progressBar = new QProgressBar();
+    progressBar->setRange(0, 100);
+    QLabel* progressLabel = new QLabel();
+    progressLabel->setAlignment(Qt::AlignCenter);
 
-    if (inputFileFormat_.fileType == FileType::UNKNOWN) {
-        enableLayoutWidgets(midLayout_, false);
+    mainLayout_->addWidget(progressBar);
+    mainLayout_->addWidget(progressLabel);
+
+    // updating progressbar and label
+    connect(converter_, &Converter::progressChanged, this, [progressBar, progressLabel]
+        (int progress, bool isFinished) {
+        if (isFinished)             { progressLabel->setText("Done!"); }
+        else if (progress == 0)     { progressLabel->setText("Starting..."); }
+        else                        { progressLabel->setText("Processing..."); }
+        progressBar->setValue(progress);
+    });
+
+    // showing error
+    connect(converter_, &Converter::errorOccured, this, [progressLabel](QString message) {
+        progressLabel->setText("ERROR! " + message);
+    });
+
+    // resetting progress
+    connect(this, &MainWindow::resetProgress, this, [progressBar, progressLabel]() {
+        progressLabel->setText("Waiting for new process");
+        progressBar->setValue(0);
+    });
+
+    // setting starting values
+    emit resetProgress();
+}
+
+void MainWindow::updateFileTypeBox(const FormatInfo& inputFileFormat)
+{
+    oFileTypeCB_->clear();
+
+    if (inputFileFormat.fileType == FileType::UNKNOWN) {
+        QMessageBox::warning(this, "File type isn't supported",
+            "Selected file type '." + QFileInfo(iFilePathLE_->text()).suffix() + "' is not supported.");
+        emit enableConversionSettings(false);
         return;
     }
 
     int index = 0;
     for (const auto& it : fileFormats) {
-        if (it.fileType == inputFileFormat_.fileType
-            && it.enumValue != inputFileFormat_.enumValue
+        if (it.fileType == inputFileFormat.fileType
+            && it.enumValue != inputFileFormat.enumValue
             && !labelsBlackList.contains(it.label)) {
-            convertFileTypeBox_->insertItem(index++, it.label);
+            oFileTypeCB_->insertItem(index++, it.label);
         }
     }
-
-    enableLayoutWidgets(midLayout_, true);
+    emit enableConversionSettings(true);
 }
 
 void MainWindow::enableLayoutWidgets(QLayout *layout, bool enable)
@@ -175,28 +224,23 @@ void MainWindow::enableLayoutWidgets(QLayout *layout, bool enable)
     }
 }
 
-void MainWindow::resetProgressBar()
-{
-    progressLabel_->setText("Waiting for new process");
-    progressBar_->setValue(0);
-}
-
 void MainWindow::inputFilePathEditingFinished()
 {
-    QString filePath = inputFilePathLineEdit_->text();
-    outputFolderLineEdit_->setText(QFileInfo(filePath).path());
+    QString filePath = iFilePathLE_->text();
+    oFolderPathLE_->setText(QFileInfo(filePath).path());
+    oFileNameLE_->setText(QFileInfo(filePath).completeBaseName());
 
-    QString extension = QFileInfo(filePath).suffix();
+    QString suffix = QFileInfo(filePath).suffix();
 
-    inputFileFormat_.fileType = FileType::UNKNOWN;
+    FormatInfo fileFormatInfo = {FileType::UNKNOWN};
     for (const auto& it : fileFormats) {
-        if (it.label == extension) {
-            inputFileFormat_ = it;
+        if (it.label == suffix) {
+            fileFormatInfo = std::move(it);
             break;
         }
     }
-    updateFileTypeBox();
-    resetProgressBar();
+    updateFileTypeBox(fileFormatInfo);
+    emit resetProgress();
 }
 
 void MainWindow::browseFileButtonClicked()
@@ -205,82 +249,60 @@ void MainWindow::browseFileButtonClicked()
         this, tr("Open File"), QDir::homePath());
 
     if (!filePath.isEmpty()) {
-        inputFilePathLineEdit_->setText(filePath);
+        iFilePathLE_->setText(filePath);
         inputFilePathEditingFinished();
     }
 
-    resetProgressBar();
+    emit resetProgress();
 }
 
 void MainWindow::browseFolderButtonClicked()
 {
     QString folderPath = QFileDialog::getExistingDirectory(
-        this, tr("Select Folder"), outputFolderLineEdit_->text());
+        this, tr("Select Folder"), oFolderPathLE_->text());
 
     if (!folderPath.isEmpty()) {
-        outputFolderLineEdit_->setText(folderPath);
+        oFolderPathLE_->setText(folderPath);
     }
-
-    resetProgressBar();
+    emit resetProgress();
 }
 
 void MainWindow::convertButtonClicked()
 {
-    QString inputFilePath = inputFilePathLineEdit_->text();
-    QString outputFolderPath = outputFolderLineEdit_->text();
-    QString fileName = QFileInfo(inputFilePath).completeBaseName();
-    QString extension = convertFileTypeBox_->currentText().toLower();
-    QString outputFilePath = QFileInfo(outputFolderPath, fileName + "." + extension).absoluteFilePath();
+    QString oPath = oFolderPathLE_->text();
+    QString oName = oFileNameLE_->text();
+    QString oSuffix = oFileTypeCB_->currentText();
+    QString outputFilePath = QFileInfo(oPath + oName + "." + oSuffix).absoluteFilePath();
 
     if (QFileInfo(outputFilePath).exists()) {
-        QMessageBox::StandardButton overwrite;
-        overwrite = QMessageBox::question(nullptr, "File Exists",
+        QMessageBox::StandardButton overwrite = QMessageBox::question(nullptr, "File Exists",
+            "The file already exists. Overwrite?", QMessageBox::Yes | QMessageBox::No);
+        if (overwrite == QMessageBox::No) {
+            return;
+        }
+    }
+    converter_->runConverter(iFilePathLE_->text(), outputFilePath);
+}
+
+void MainWindow::removeButtonClicked()
+{
+    QString oPath = oFolderPathLE_->text();
+    QString oName = oFileNameLE_->text();
+    QString oSuffix = QFileInfo(iFilePathLE_->text()).suffix();
+    QString outputFilePath = QFileInfo(oPath + oName + "." + oSuffix).absoluteFilePath();
+
+    if (QFileInfo(outputFilePath).exists()) {
+        QMessageBox::StandardButton overwrite = QMessageBox::question(nullptr, "File Exists",
             "The file already exists. Overwrite?", QMessageBox::Yes | QMessageBox::No);
         if (overwrite == QMessageBox::No) {
             return;
         }
     }
 
-    converter_->runConverter(inputFilePath, outputFilePath);
-}
-
-void MainWindow::removeButtonClicked()
-{
-    // ADD OUTPUT PATH
-    QString filePath = inputFilePathLineEdit_->text();
-
-    QMessageBox::StandardButton replace;
-    replace = QMessageBox::question(nullptr, "Overwrites old file",
-        "THIS OPERATION OVERWRITES OLD FILE WITH FILE THAT DOESN'T CONTAIN METADATA. DO YOU WANT TO PROCEED?",
-        QMessageBox::Yes | QMessageBox::No);
-
-    if (replace == QMessageBox::No) {
-        return;
-    }
-
-    converter_->runMetaDataRemover(filePath, filePath);
+    converter_->runMetaDataRemover(iFilePathLE_->text(), outputFilePath);
 }
 
 void MainWindow::convertFileTypeChanged()
 {
-    resetProgressBar();
-}
-
-void MainWindow::updateProgressBar(int progress, bool isFinished)
-{
-    // progress can be 100 but ffmpeg still processing so adding state if isFinished
-    if (isFinished) {
-        progressLabel_->setText("Done!");
-    } else if (progress == 0) {
-        progressLabel_->setText("Starting...");
-    } else {
-        progressLabel_->setText("Processing...");
-    }
-
-    progressBar_->setValue(progress);
-}
-
-void MainWindow::handleError(const QString &message)
-{
-    progressLabel_->setText("ERROR! " + message);
+    emit resetProgress();
 }

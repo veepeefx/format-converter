@@ -6,8 +6,6 @@
 #include <QMainWindow>
 #include <QGridLayout>
 #include <QComboBox>
-#include <QPushButton>
-#include <QProgressBar>
 
 #include "CommonEnums.h"
 #include "Converter.h"
@@ -22,32 +20,31 @@ public:
     ~MainWindow() override;
 
 private:
-
     Converter* converter_;
 
-    int mainLayoutRow_ = 0;
-    QGridLayout *topLayout_;
-    QHBoxLayout* midLayout_;
+    QVBoxLayout* mainLayout_;
 
-    QLineEdit* inputFilePathLineEdit_ = nullptr;
-    QLineEdit* outputFolderLineEdit_ = nullptr;
-    QComboBox* convertFileTypeBox_ = nullptr;
-    QPushButton* convertButton_ = nullptr;
-    QProgressBar* progressBar_ = nullptr;
-    QLabel* progressLabel_ = nullptr;
+    QLineEdit* iFilePathLE_ = nullptr;
+    QLineEdit* oFolderPathLE_ = nullptr;
+    QLineEdit* oFileNameLE_ = nullptr;
+    QComboBox* oFileTypeCB_ = nullptr;
 
-    FormatInfo inputFileFormat_;
+    // init functions
+    void initFilePathWidgets();
+    void initInput(QGridLayout& layout, int& rowIndex);
+    void initOutput(QGridLayout& layout, int& rowIndex);
 
-    void initInputFileWidgets();
-    void initOutputFileWidgets();
-    void initConvertSettings();
-    void initMetaDataRemoverSettings();
-    void updateFileTypeBox();
+    void initConvertToolWidgets();
+    void initConvertSettings(QHBoxLayout& layout);
+    void initMetaDataRemoverSettings(QHBoxLayout& layout);
 
-    // changes all child widgets enabled recursively to chosen boolean
+    void initProgressIndicator();
+
+    // update functions
+    void updateFileTypeBox(const FormatInfo& inputFileFormat);
+
+    // helper functions
     static void enableLayoutWidgets(QLayout* layout, bool enable);
-
-    void resetProgressBar();
 
 private slots:
     void browseFileButtonClicked();
@@ -57,8 +54,10 @@ private slots:
     void removeButtonClicked();
     void convertFileTypeChanged();
 
-    void updateProgressBar(int progress, bool isFinished);
-    void handleError(const QString& message);
+signals:
+    void resetProgress();
+    void enableConversionSettings(bool enable);
+
 };
 
 
