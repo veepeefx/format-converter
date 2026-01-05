@@ -9,7 +9,7 @@
 
 Converter::Converter(QObject* parent) : QObject(parent), totalDuration_(0) {}
 
-Converter::~Converter() {}
+Converter::~Converter() = default;
 
 void Converter::runConverter(const QString& inputFilePath, const QString& outputFilePath)
 {
@@ -70,7 +70,9 @@ void Converter::runMetaDataRemover(const QString& inputFilePath, const QString& 
 
 void Converter::runFFmpeg(const QStringList& args)
 {
+    // emitting signal that ffmpeg processing has started
     emit progressChanged(0);
+
     QProcess* ffmpeg = new QProcess(this);
 
     // connecting progress updates
@@ -86,7 +88,7 @@ void Converter::runFFmpeg(const QStringList& args)
 
     // emitting finished signal
     connect(ffmpeg, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [this] () {
-        emit progressChanged(100);
+        emit progressChanged(100, true);
     });
 
     ffmpeg->start("ffmpeg", args);
@@ -104,7 +106,7 @@ FormatInfo Converter::getOutputFormat(const QString& outputFilePath)
     return {};
 }
 
-void Converter::updateAudioArgs(QStringList &args, const int &enumValue)
+void Converter::updateAudioArgs(QStringList &args, int enumValue)
 {
     switch (enumValue) {
         case static_cast<int>(AudioFormats::MP3):
@@ -138,9 +140,8 @@ void Converter::updateAudioArgs(QStringList &args, const int &enumValue)
     }
 }
 
-void Converter::updateVideoArgs(QStringList &args, const int &enumValue)
+void Converter::updateVideoArgs(QStringList &args, int enumValue)
 {
-
     switch (enumValue) {
         case static_cast<int>(VideoFormats::MP4):
         case static_cast<int>(VideoFormats::M4V):
@@ -190,7 +191,7 @@ void Converter::updateVideoArgs(QStringList &args, const int &enumValue)
     }
 }
 
-void Converter::updateImageArgs(QStringList &args, const int &enumValue)
+void Converter::updateImageArgs(QStringList &args, int enumValue)
 {
     switch (enumValue) {
         case static_cast<int>(ImageFormats::JPEG):
@@ -214,25 +215,32 @@ void Converter::updateImageArgs(QStringList &args, const int &enumValue)
 
 void Converter::handleProgress(const QString& text)
 {
-    std::cerr << "JEE";
-    if (totalDuration_ == 0) {
-        QRegularExpression reDuration("Duration: (\\d+):(\\d+):(\\d+\\.\\d+)");
-        QRegularExpressionMatch match = reDuration.match(text);
-        if (match.hasMatch()){
-            totalDuration_ = match.captured(1).toInt() * 3600
+    static const QRegularExpression reDuration("Duration: (\\d+):(\\d+):(\\d+\\.\\d+)");
+    static const QRegularExpression reTime("time=(\\d+):(\\d+):(\\d+\\.\\d+)");
+
+    for (const QString &line : text.split('\n')) {
+        if (!line.contains("time=") && !line.contains("Duration")) {  continue; }
+
+        if (totalDuration_ == 0) {
+            QRegularExpressionMatch match = reDuration.match(line);
+            if (match.hasMatch()){
+                totalDuration_ = match.captured(1).toInt() * 3600
+                                + match.captured(2).toInt() * 60
+                                + match.captured(3).toDouble();
+                continue;
+            }
+        }
+
+        // read current
+        QRegularExpressionMatch match = reTime.match(line);
+        if (match.hasMatch() && totalDuration_ > 0) {
+            double current = match.captured(1).toInt() * 3600
                             + match.captured(2).toInt() * 60
                             + match.captured(3).toDouble();
-        }
-    }
+            int progress = static_cast<int>((current / totalDuration_) * 100);
 
-    // read current
-    QRegularExpression reTime("time=(\\d+):(\\d+):(\\d+\\.\\d+)");
-    QRegularExpressionMatch match = reTime.match(text);
-    if (match.hasMatch() && totalDuration_ > 0) {
-        double current = match.captured(1).toInt() * 3600
-                        + match.captured(2).toInt() * 60
-                        + match.captured(3).toDouble();
-        int progress = int((current / totalDuration_) * 100);
-        emit progressChanged(progress);
+            if (progress >= 100) { progress = 100; }
+            emit progressChanged(progress);
+        }
     }
 }

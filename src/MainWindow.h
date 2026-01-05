@@ -29,12 +29,12 @@ private:
     QGridLayout *topLayout_;
     QHBoxLayout* midLayout_;
 
-    QLineEdit* inputFilePathLineEdit_;
-    QLineEdit* outputFolderLineEdit_;
-    QComboBox* convertFileTypeBox_;
-    QPushButton* convertButton_;
-    QProgressBar* progressBar_;
-    QLabel* progressLabel_;
+    QLineEdit* inputFilePathLineEdit_ = nullptr;
+    QLineEdit* outputFolderLineEdit_ = nullptr;
+    QComboBox* convertFileTypeBox_ = nullptr;
+    QPushButton* convertButton_ = nullptr;
+    QProgressBar* progressBar_ = nullptr;
+    QLabel* progressLabel_ = nullptr;
 
     FormatInfo inputFileFormat_;
 
@@ -45,7 +45,7 @@ private:
     void updateFileTypeBox();
 
     // changes all child widgets enabled recursively to chosen boolean
-    void enableLayoutWidgets(QLayout* layout, bool enable);
+    static void enableLayoutWidgets(QLayout* layout, bool enable);
 
     void resetProgressBar();
 
@@ -57,7 +57,7 @@ private slots:
     void removeButtonClicked();
     void convertFileTypeChanged();
 
-    void updateProgressBar(const int& progress);
+    void updateProgressBar(int progress, bool isFinished);
     void handleError(const QString& message);
 };
 

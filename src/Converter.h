@@ -20,16 +20,22 @@ private:
 
     double totalDuration_;
 
+    // builders for ffmpeg arguments
+    static void updateVideoArgs(QStringList& args, int enumValue);
+    static void updateAudioArgs(QStringList& args, int enumValue);
+    static void updateImageArgs(QStringList& args, int enumValue);
+
     void runFFmpeg(const QStringList& args);
-    void updateVideoArgs(QStringList& args, const int& enumValue);
-    void updateAudioArgs(QStringList& args, const int& enumValue);
-    void updateImageArgs(QStringList& args, const int& enumValue);
+
+    // handless ffmpeg progress updates
     void handleProgress(const QString& text);
 
     FormatInfo getOutputFormat(const QString& outputFilePath);
 
 signals:
-    void progressChanged(const int& value);
+    // converter signals
+    void progressChanged(int value, bool isFinished = false);
+    void progressFinished();
     void errorOccured(const QString& errorMessage);
 
 };

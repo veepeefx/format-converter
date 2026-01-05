@@ -266,15 +266,17 @@ void MainWindow::convertFileTypeChanged()
     resetProgressBar();
 }
 
-void MainWindow::updateProgressBar(const int& progress)
+void MainWindow::updateProgressBar(int progress, bool isFinished)
 {
-    if (progress == 0) {
-        progressLabel_->setText("Starting...");
-    } else if (progress >= 100) {
+    // progress can be 100 but ffmpeg still processing so adding state if isFinished
+    if (isFinished) {
         progressLabel_->setText("Done!");
+    } else if (progress == 0) {
+        progressLabel_->setText("Starting...");
     } else {
         progressLabel_->setText("Processing...");
     }
+
     progressBar_->setValue(progress);
 }
 
