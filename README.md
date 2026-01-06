@@ -1,13 +1,49 @@
-# Format Converter (C++ / Qt)
+# Format Converter 
+## (C++ / Qt / FFmpeg)
 
 ## Description
-Format converter which allows to change file format of a file. Changes can be only made with in
-same category for example png -> jpg or mp4 -> mkv, but you can't do png -> mkv.
+Format Converter is a cross-platform media conversion tool written in C++ (Qt 6) and powered by
+FFmpeg. It allows you to convert audio, video, and image files between supported formats and
+optionally remove all metadata from your media files.
+
+## Features
+- Change file format of your music, videos or images
+- Remove unwanted metadata from your media
+- Simple and clean Qt-based user interface
+
+## Supported Formats
+- Audio: mp3, wav, aac, flac, ogg, wma, m4a, aiff
+- Video: mp4, avi, mkv, mov, wmv, flv, webm, mpeg, m4v
+- Image: jpeg, png, gif, bmp, tiff, heif, ico
+
+## Installation / Build
+1. Clone this repo
+   ```
+   git clone https://github.com/veepeefx/format-converter
+   cd format-converter
+   ```
+
+2. Create a build directory and run CMake
+    ```
+    mkdir build
+    cd build
+    cmake ..
+    cmake --build .
+    ```
+
+3. Run the executable
+    ```
+    ./format-converter
+    ```
 
 ## Dependencies
+- [FFmpeg](https://ffmpeg.org/download.html) (must be installed and available in PATH)
 - C++ 20 compatible compiler
 - CMake 4.0 ->
-- Qt6
+- Qt6 with the following required modules:
+    - Core
+    - Gui
+    - Widgets
 
 ## License
 Licensed under MIT License.
