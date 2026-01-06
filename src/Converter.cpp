@@ -13,6 +13,7 @@ Converter::~Converter() = default;
 
 void Converter::runConverter(const QString& inputFilePath, const QString& outputFilePath)
 {
+    emit newLogMessage("\nStarting...\n");
     FormatInfo outputFormat = getOutputFormat(outputFilePath);
 
     QStringList args;
@@ -30,7 +31,7 @@ void Converter::runConverter(const QString& inputFilePath, const QString& output
             updateImageArgs(args, outputFormat.enumValue);
             break;
         case FileType::UNKNOWN:
-            emit errorOccured("File type unknown");
+            emit newLogMessage("File type unknown!");
             return;
     }
 
@@ -60,7 +61,7 @@ void Converter::runMetaDataRemover(const QString& inputFilePath, const QString& 
             // other image types are lossless so FFmpeg makes lossless copy it self
             break;
         case FileType::UNKNOWN:
-            errorOccured("File type unknown");
+            emit newLogMessage("File type unknown!");
             return;
     }
 
@@ -83,12 +84,13 @@ void Converter::runFFmpeg(const QStringList& args)
 
     // emitting error signal
     connect(ffmpeg, &QProcess::errorOccurred, [this]() {
-        emit errorOccured("During running ffmpeg!");
+        emit newLogMessage("\nProgress failed during process!\n");
     });
 
     // emitting finished signal
     connect(ffmpeg, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [this] () {
         emit progressChanged(100, true);
+        emit newLogMessage("\nProgress finished!\n");
     });
 
     ffmpeg->start("ffmpeg", args);
@@ -220,6 +222,7 @@ void Converter::handleProgress(const QString& text)
 
     for (const QString &line : text.split('\n')) {
         if (!line.contains("time=") && !line.contains("Duration")) {  continue; }
+        emit newLogMessage(line.trimmed());
 
         if (totalDuration_ == 0) {
             QRegularExpressionMatch match = reDuration.match(line);

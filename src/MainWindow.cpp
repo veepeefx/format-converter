@@ -11,6 +11,7 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QProgressBar>
+#include <QTextEdit>
 
 
 MainWindow::MainWindow(Converter* converter, QWidget *parent) : converter_(converter), QMainWindow(parent)
@@ -152,29 +153,25 @@ void MainWindow::initProgressIndicator()
 {
     QProgressBar* progressBar = new QProgressBar();
     progressBar->setRange(0, 100);
-    QLabel* progressLabel = new QLabel();
-    progressLabel->setAlignment(Qt::AlignCenter);
 
+    QTextEdit* logBox = new QTextEdit("Start your process...\n");
+    logBox->setReadOnly(true);
+
+    mainLayout_->addWidget(logBox);
     mainLayout_->addWidget(progressBar);
-    mainLayout_->addWidget(progressLabel);
+
+    connect(converter_, &Converter::newLogMessage, this, [logBox](const QString& logMessage) {
+        logBox->append(logMessage);
+        logBox->moveCursor(QTextCursor::End);
+    });
 
     // updating progressbar and label
-    connect(converter_, &Converter::progressChanged, this, [progressBar, progressLabel]
-        (int progress, bool isFinished) {
-        if (isFinished)             { progressLabel->setText("Done!"); }
-        else if (progress == 0)     { progressLabel->setText("Starting..."); }
-        else                        { progressLabel->setText("Processing..."); }
+    connect(converter_, &Converter::progressChanged, this, [progressBar, logBox] (int progress) {
         progressBar->setValue(progress);
     });
 
-    // showing error
-    connect(converter_, &Converter::errorOccured, this, [progressLabel](QString message) {
-        progressLabel->setText("ERROR! " + message);
-    });
-
     // resetting progress
-    connect(this, &MainWindow::resetProgress, this, [progressBar, progressLabel]() {
-        progressLabel->setText("Waiting for new process");
+    connect(this, &MainWindow::resetProgress, this, [progressBar]() {
         progressBar->setValue(0);
     });
 

@@ -36,7 +36,7 @@ signals:
     // converter signals
     void progressChanged(int value, bool isFinished = false);
     void progressFinished();
-    void errorOccured(const QString& errorMessage);
+    void newLogMessage(const QString& logMessage);
 
 };
 
