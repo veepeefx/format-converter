@@ -272,7 +272,7 @@ void MainWindow::convertButtonClicked()
     QString oPath = oFolderPathLE_->text();
     QString oName = oFileNameLE_->text();
     QString oSuffix = oFileTypeCB_->currentText();
-    QString outputFilePath = QFileInfo(oPath + oName + "." + oSuffix).absoluteFilePath();
+    QString outputFilePath = QDir(oPath).filePath(oName + "." + oSuffix);
 
     if (QFileInfo(outputFilePath).exists()) {
         QMessageBox::StandardButton overwrite = QMessageBox::question(nullptr, "File Exists",
@@ -289,7 +289,7 @@ void MainWindow::removeButtonClicked()
     QString oPath = oFolderPathLE_->text();
     QString oName = oFileNameLE_->text();
     QString oSuffix = QFileInfo(iFilePathLE_->text()).suffix();
-    QString outputFilePath = QFileInfo(oPath + oName + "." + oSuffix).absoluteFilePath();
+    QString outputFilePath = QDir(oPath).filePath(oName + "." + oSuffix);
 
     if (QFileInfo(outputFilePath).exists()) {
         QMessageBox::StandardButton overwrite = QMessageBox::question(nullptr, "File Exists",
