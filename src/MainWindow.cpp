@@ -114,6 +114,12 @@ void MainWindow::initConvertSettings(QHBoxLayout& layout)
 
     row++;
 
+    QPushButton* convertButton = new QPushButton("Convert");
+    connect(convertButton, &QPushButton::clicked, this, &MainWindow::convertButtonClicked);
+    convertLayout->addWidget(convertButton, row, 0, 1, 2);
+
+    row++;
+
     QLabel* fileTypeLabel = new QLabel("Select new extension format: ");
     oFileTypeCB_ = new QComboBox();
     connect(oFileTypeCB_, &QComboBox::currentIndexChanged, this, &MainWindow::convertFileTypeChanged);
@@ -134,12 +140,6 @@ void MainWindow::initConvertSettings(QHBoxLayout& layout)
     }
 
     convertLayout->addWidget(metadataPreservation, row, 0, 1, 2);
-
-    row++;
-
-    QPushButton* convertButton = new QPushButton("Convert");
-    connect(convertButton, &QPushButton::clicked, this, &MainWindow::convertButtonClicked);
-    convertLayout->addWidget(convertButton, row, 0, 1, 2);
 
     layout.addLayout(convertLayout);
 }

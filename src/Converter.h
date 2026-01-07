@@ -20,6 +20,10 @@ private:
 
     double totalDuration_;
     void runFFmpeg(const QStringList& args);
+    void runExifTool(const QStringList& args);
+
+    void removeVideoMetadata(const QString& filePath, VideoFormats format);
+    bool isFragmented(const QString& filePath);
 
     // handless ffmpeg progress updates
     void handleProgress(const QString& text);

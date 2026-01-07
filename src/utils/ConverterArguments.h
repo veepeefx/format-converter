@@ -6,8 +6,6 @@
 
 #include "CommonEnums.h"
 
-
-
 namespace FFmpeg::Converter {
 
     inline QStringList audioArgs(const QString& inputFilePath,
@@ -140,11 +138,46 @@ namespace FFmpeg::Converter {
         args << outputFilePath;
         return args;
     }
+}
 
+namespace FFmpeg::RemoveMetaData {
+
+    inline QStringList videoArgs(const QString& inputFilePath, const QString& outputFilePath)
+    {
+        QStringList args;
+        args << "-i" << inputFilePath
+             << "-map_metadata" << "-1"
+             << "-c" << "copy"
+             << outputFilePath;
+
+        return args;
+    }
+}
+
+namespace FFprobe {
+    inline QStringList fragmentedArgs (const QString& filePath)
+    {
+        QStringList args;
+        args << "-v" << "error"
+         << "-show_entries" << "moof"
+         << "-of" << "default=nw=1"
+         << filePath;
+
+        return args;
+    }
 }
 
 namespace ExifTool {
 
+    inline QStringList exifArgs(const QString& filePath)
+    {
+        QStringList args;
+        args << "-all="
+             << "-overwrite_original"
+            << filePath;
+
+        return args;
+    }
 }
 
 #endif //FORMAT_CONVERTER_CONVERTERARGUMENTS_H
