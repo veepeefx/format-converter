@@ -37,13 +37,19 @@ optionally remove all metadata from your media files.
     ```
 
 ## Dependencies
-- [FFmpeg](https://ffmpeg.org/download.html) (must be installed and available in PATH)
+
+### Required
+- [FFmpeg](https://ffmpeg.org/download.html) - media conversion (must be installed and available in PATH)
 - C++ 20 compatible compiler
 - CMake 4.0 ->
 - Qt6 with the following required modules:
     - Core
     - Gui
     - Widgets
+
+### Optional
+- [ExifTool](https://exiftool.org/install.html) - metadata preservation (must be installed and
+available in PATH)
 
 ## License
 Licensed under MIT License.

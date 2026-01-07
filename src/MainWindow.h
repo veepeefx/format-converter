@@ -15,11 +15,12 @@ class MainWindow : public QMainWindow {
 
 public:
 
-    explicit MainWindow(Converter* converter, QWidget *parent = nullptr);
+    explicit MainWindow(Converter* converter, bool exifToolInstalled, QWidget *parent = nullptr);
 
     ~MainWindow() override;
 
 private:
+    const bool exifToolInstalled_;
     Converter* converter_;
 
     QVBoxLayout* mainLayout_;

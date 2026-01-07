@@ -14,7 +14,8 @@
 #include <QTextEdit>
 
 
-MainWindow::MainWindow(Converter* converter, QWidget *parent) : converter_(converter), QMainWindow(parent)
+MainWindow::MainWindow(Converter* converter, bool exifToolInstalled, QWidget *parent)
+: converter_(converter), exifToolInstalled_(exifToolInstalled), QMainWindow(parent)
 {
     QWidget* central = new QWidget(this);
     setCentralWidget(central);
