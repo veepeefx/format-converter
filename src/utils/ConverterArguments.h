@@ -169,12 +169,25 @@ namespace FFprobe {
 
 namespace ExifTool {
 
-    inline QStringList exifArgs(const QString& filePath)
+    inline QStringList removeMetadata(const QString& filePath)
     {
         QStringList args;
         args << "-all="
              << "-overwrite_original"
             << filePath;
+
+        return args;
+    }
+
+    inline QStringList copyMetadata(const QString& inputFilePath, const QString& outputFilePath)
+    {
+        QStringList args;
+        args << "-TagsFromFile" << inputFilePath
+             << "-All:All"
+             << "-All:All>XMP"
+             << "-overwrite_original"
+             << "-ignoreMinorErrors"
+             << outputFilePath;
 
         return args;
     }

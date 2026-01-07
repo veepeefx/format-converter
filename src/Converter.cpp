@@ -31,6 +31,11 @@ void Converter::runConverter(const QString& inputFilePath, const QString& output
     }
 
     runFFmpeg(args);
+
+    connect(this, &Converter::progressFinished, this, [this, inputFilePath, outputFilePath]() {
+        runExifTool(ExifTool::copyMetadata(inputFilePath, outputFilePath));
+        disconnect(this, &Converter::progressFinished, nullptr, nullptr);
+    });
 }
 
 void Converter::runMetaDataRemover(const QString& inputFilePath, const QString& outputFilePath)
@@ -53,7 +58,7 @@ void Converter::runMetaDataRemover(const QString& inputFilePath, const QString& 
         // all audio and image formats are supported by exiftool
         case FileType::AUDIO:
         case FileType::IMAGE:
-            runExifTool(ExifTool::exifArgs(outputFilePath));
+            runExifTool(ExifTool::removeMetadata(outputFilePath));
             break;
 
         // only mp4 type non-fragmented formats are supported by exiftool we fall back to ffmpeg
@@ -90,6 +95,7 @@ void Converter::runFFmpeg(const QStringList& args)
     connect(ffmpeg, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [this] () {
         emit progressChanged(100, true);
         emit newLogMessage("\nFFmpeg finished!\n");
+        emit progressFinished();
     });
 
     ffmpeg->start("ffmpeg", args);
@@ -101,7 +107,11 @@ void Converter::runExifTool(const QStringList& args)
     QProcess* exifTool = new QProcess(this);
 
     connect(exifTool, &QProcess::readyReadStandardError, [exifTool, this]() {
-        emit newLogMessage("ExifTool: " + exifTool->readAllStandardError().trimmed());
+        QString text = exifTool->readAllStandardError().trimmed();
+        emit newLogMessage("ExifTool: " + text);
+        if (text.contains("Can't write a")) {
+            emit newLogMessage("ExifTool: Using best effort to move all metadata");
+        }
     });
 
     // emitting error signal
