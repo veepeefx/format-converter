@@ -1,9 +1,9 @@
 #include "MainWindow.h"
+#include "utils/CommonEnums.h"
+#include "Converter.h"
+#include "utils/DependencyChecker.h"
 
 #include <iostream>
-
-#include "CommonEnums.h"
-#include "Converter.h"
 
 #include <QFileDialog>
 #include <QPushButton>
@@ -12,10 +12,11 @@
 #include <QMessageBox>
 #include <QProgressBar>
 #include <QTextEdit>
+#include <QCheckBox>
 
 
-MainWindow::MainWindow(Converter* converter, bool exifToolInstalled, QWidget *parent)
-: converter_(converter), exifToolInstalled_(exifToolInstalled), QMainWindow(parent)
+MainWindow::MainWindow(Converter* converter, QWidget *parent)
+: converter_(converter), QMainWindow(parent)
 {
     QWidget* central = new QWidget(this);
     setCentralWidget(central);
@@ -92,7 +93,7 @@ void MainWindow::initConvertToolWidgets()
     mainLayout_->addLayout(layout);
     mainLayout_->addSpacerItem(new QSpacerItem(20, 20));
 
-    connect(this, &MainWindow::enableConversionSettings, this, [layout](bool enable) {
+    connect(this, &MainWindow::enableConversionSettings, this, [layout, this](bool enable) {
         enableLayoutWidgets(layout, enable);
     });
 
@@ -119,6 +120,20 @@ void MainWindow::initConvertSettings(QHBoxLayout& layout)
 
     convertLayout->addWidget(fileTypeLabel, row, 0);
     convertLayout->addWidget(oFileTypeCB_, row, 1);
+
+    row++;
+
+    QCheckBox* metadataPreservation = new QCheckBox("Preserve metadata");
+
+    // if exiftool isn't installed metadata preservation isn't in use
+    if (!DependencyChecker::isExifToolAvailable()){
+        metadataPreservation->setToolTip("Install ExifTool to be able to preserve metadata");
+        widgetNotInUse_.insert(metadataPreservation);
+    } else {
+        metadataPreservation->setChecked(true);
+    }
+
+    convertLayout->addWidget(metadataPreservation, row, 0, 1, 2);
 
     row++;
 
@@ -209,7 +224,13 @@ void MainWindow::enableLayoutWidgets(QLayout *layout, bool enable)
         QLayoutItem* item = layout->itemAt(i);
 
         if (QWidget* widget = item->widget()) {
-            // all but Qlabels
+            // some widgets have restrictions (all dependencies not installed) only setting them
+            // false is allowed
+            if (widgetNotInUse_.contains(widget) && enable) {
+                continue;
+            }
+
+            // all but Qlabels are affected by enabling
             if (!qobject_cast<QLabel*>(widget)) {
                 widget->setEnabled(enable);
             }
@@ -233,7 +254,7 @@ void MainWindow::inputFilePathEditingFinished()
     FormatInfo fileFormatInfo = {FileType::UNKNOWN};
     for (const auto& it : fileFormats) {
         if (it.label == suffix) {
-            fileFormatInfo = std::move(it);
+            fileFormatInfo = it;
             break;
         }
     }
@@ -272,7 +293,7 @@ void MainWindow::convertButtonClicked()
     QString oSuffix = oFileTypeCB_->currentText();
     QString outputFilePath = QDir(oPath).filePath(oName + "." + oSuffix);
 
-    if (QFileInfo(outputFilePath).exists()) {
+    if (QFileInfo::exists(outputFilePath)) {
         QMessageBox::StandardButton overwrite = QMessageBox::question(nullptr, "File Exists",
             "The file already exists. Overwrite?", QMessageBox::Yes | QMessageBox::No);
         if (overwrite == QMessageBox::No) {
@@ -289,7 +310,7 @@ void MainWindow::removeButtonClicked()
     QString oSuffix = QFileInfo(iFilePathLE_->text()).suffix();
     QString outputFilePath = QDir(oPath).filePath(oName + "." + oSuffix);
 
-    if (QFileInfo(outputFilePath).exists()) {
+    if (QFileInfo::exists(outputFilePath)) {
         QMessageBox::StandardButton overwrite = QMessageBox::question(nullptr, "File Exists",
             "The file already exists. Overwrite?", QMessageBox::Yes | QMessageBox::No);
         if (overwrite == QMessageBox::No) {

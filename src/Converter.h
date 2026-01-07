@@ -3,7 +3,7 @@
 #include <QObject>
 #include <QString>
 
-#include "CommonEnums.h"
+#include "utils/CommonEnums.h"
 
 class Converter : public QObject {
     Q_OBJECT

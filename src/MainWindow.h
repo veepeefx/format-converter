@@ -7,7 +7,7 @@
 #include <QGridLayout>
 #include <QComboBox>
 
-#include "CommonEnums.h"
+#include "utils/CommonEnums.h"
 #include "Converter.h"
 
 class MainWindow : public QMainWindow {
@@ -15,12 +15,11 @@ class MainWindow : public QMainWindow {
 
 public:
 
-    explicit MainWindow(Converter* converter, bool exifToolInstalled, QWidget *parent = nullptr);
+    explicit MainWindow(Converter* converter, QWidget *parent = nullptr);
 
     ~MainWindow() override;
 
 private:
-    const bool exifToolInstalled_;
     Converter* converter_;
 
     QVBoxLayout* mainLayout_;
@@ -29,6 +28,10 @@ private:
     QLineEdit* oFolderPathLE_ = nullptr;
     QLineEdit* oFileNameLE_ = nullptr;
     QComboBox* oFileTypeCB_ = nullptr;
+
+    // all widgets which cannot be enabled due restrictions
+    // for example exiftool isn't installed
+    QSet<QWidget*> widgetNotInUse_;
 
     // init functions
     void initFilePathWidgets();
@@ -45,7 +48,7 @@ private:
     void updateFileTypeBox(const FormatInfo& inputFileFormat);
 
     // helper functions
-    static void enableLayoutWidgets(QLayout* layout, bool enable);
+    void enableLayoutWidgets(QLayout* layout, bool enable);
 
 private slots:
     void browseFileButtonClicked();

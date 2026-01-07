@@ -5,7 +5,7 @@
 #include <QProcess>
 #include <QRegularExpression>
 
-#include "CommonEnums.h"
+#include "utils/CommonEnums.h"
 
 Converter::Converter(QObject* parent) : QObject(parent), totalDuration_(0) {}
 
