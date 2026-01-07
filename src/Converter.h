@@ -10,8 +10,8 @@ class Converter : public QObject {
 
 public:
 
-    Converter(QObject* parent = nullptr);
-    ~Converter();
+    Converter(QObject* parent = nullptr) : QObject(parent), totalDuration_(0) {};
+    ~Converter() = default;
 
     void runConverter(const QString& inputFilePath, const QString& outputFilePath);
     void runMetaDataRemover(const QString& inputFilePath, const QString& outputFilePath);
@@ -19,18 +19,14 @@ public:
 private:
 
     double totalDuration_;
-
-    // builders for ffmpeg arguments
-    static void updateVideoArgs(QStringList& args, int enumValue);
-    static void updateAudioArgs(QStringList& args, int enumValue);
-    static void updateImageArgs(QStringList& args, int enumValue);
-
     void runFFmpeg(const QStringList& args);
 
     // handless ffmpeg progress updates
     void handleProgress(const QString& text);
+    void getTotalDuration(const QString& line);
+    void getProgress(const QString& line);
 
-    FormatInfo getOutputFormat(const QString& outputFilePath);
+    static FormatInfo getOutputFormat(const QString& outputFilePath);
 
 signals:
     // converter signals
