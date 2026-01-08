@@ -26,29 +26,18 @@ void Converter::runConverter(const QString& inputFilePath, const QString& output
         return;
     }
     state_ = State::RUNNING;
-
     emit onLogMessage("\nStarting format converter...\n");
+
     FormatInfo format = getFileFormat(outputFilePath);
-    FileType type = format.fileType;
-    QStringList args;
 
     // building arguments depending on filetype and format
-    switch (type) {
-        case FileType::AUDIO:
-            args = FFmpeg::Converter::audioArgs(inputFilePath, outputFilePath, format.enumValue);
-            break;
+    QStringList args = Arguments::converter(inputFilePath, outputFilePath, format);
 
-        case FileType::VIDEO:
-            args = FFmpeg::Converter::videoArgs(inputFilePath, outputFilePath, format.enumValue);
-            break;
-
-        case FileType::IMAGE:
-            args = FFmpeg::Converter::imageArgs(inputFilePath, outputFilePath, format.enumValue);
-            break;
-
-        case FileType::UNKNOWN:
-            emit onLogMessage("File type unknown!");
-            return;
+    // if args are empty stop running
+    if (args.empty()) {
+        emit onLogMessage("File type unknown!");
+        state_ = State::IDLE;
+        return;
     }
 
     // if metadata isn't saved we only run ffmpeg and end
@@ -59,7 +48,24 @@ void Converter::runConverter(const QString& inputFilePath, const QString& output
 
     // if metadata is saved we first run ffmpeg and after exiftool
     runProcess(ProcessType::FFMPEG, args, false);
-    copyMetaData(inputFilePath, outputFilePath, type);
+    copyMetadata(inputFilePath, outputFilePath, format.fileType);
+}
+
+void Converter::copyMetadata(const QString &inputFilePath, const QString &outputFilePath, FileType type)
+{
+    connect(&progressHandler_, &ProgressHandler::finished, this,
+    [this, outputFilePath, inputFilePath, type]() {
+
+        // images and audio metadata is moved with ExifTool
+        if (type == FileType::IMAGE || type == FileType::AUDIO) {
+            QStringList args = ExifTool::CopyMetadata::standardArgs(inputFilePath, outputFilePath);
+            runProcess(ProcessType::EXIFTOOL, args, true);
+
+        // video metadata
+        } else if (type == FileType::VIDEO) {
+
+        }
+    }, Qt::SingleShotConnection);
 }
 
 void Converter::runMetadataRemover(const QString& inputFilePath, const QString& outputFilePath)
@@ -70,50 +76,35 @@ void Converter::runMetadataRemover(const QString& inputFilePath, const QString& 
     state_ = State::RUNNING;
     emit onLogMessage("\nStarting metadata remover...\n");
 
+    // TEST IS THIS NESSESARY
     if (!copyAndReplaceFile(inputFilePath, outputFilePath)) { return; }
 
     FormatInfo format = getFileFormat(outputFilePath);
-    // for metadata removal input and output filetypes are the same
-    switch (format.fileType) {
-        // only mp4 type non-fragmented formats are supported by exiftool we fall back to ffmpeg
+    QStringList args = Arguments::metadata(outputFilePath, format);
 
-        // all audio and image formats are supported by exiftool
-        case FileType::AUDIO:
-        case FileType::IMAGE: {
-            QStringList args = ExifTool::removeMetadata(outputFilePath);
-            runProcess(ProcessType::EXIFTOOL, args);
-            return;
-        }
-
-        case FileType::VIDEO: {
-            QStringList args = ExifTool::removeMetadata(outputFilePath);
-            runProcess(ProcessType::EXIFTOOL, args);
-            //emit onLogMessage("Not in use");
-            break;
-        }
-        case FileType::UNKNOWN: {
-            emit onLogMessage("File type unknown!");
-        }
+    // if args are valid we can run exiftool
+    if (!args.empty()) {
+        runProcess(ProcessType::EXIFTOOL, args);
     }
 
-    //state_ = State::IDLE;
-}
+    // empty args can be unknown filetype OR filetypes not working with ExifTool
+    switch (format.fileType) {
+        case FileType::AUDIO:
+            args = FFmpeg::RemoveMetadata::mp3Args(inputFilePath, outputFilePath);
+            break;
 
-void Converter::copyMetaData(const QString &inputFilePath, const QString &outputFilePath, FileType type)
-{
-    connect(&progressHandler_, &ProgressHandler::finished, this,
-    [this, outputFilePath, inputFilePath, type]() {
+        case FileType::VIDEO:
+            // TEST MP4 FRAGMENTATION
+            args = FFmpeg::RemoveMetadata::mkvArgs(inputFilePath, outputFilePath);
+            break;
 
-        // images and audio metadata is moved with ExifTool
-        if (type == FileType::IMAGE || type == FileType::AUDIO) {
-            QStringList args = ExifTool::copyMetadata(inputFilePath, outputFilePath);
-            runProcess(ProcessType::EXIFTOOL, args, true);
-
-        // video metadata
-        } else if (type == FileType::VIDEO) {
-
-        }
-    }, Qt::SingleShotConnection);
+        case FileType::IMAGE:
+        case FileType::UNKNOWN:
+            emit onLogMessage("File type unknown!");
+            state_ = State::IDLE;
+            return;
+    }
+    runProcess(ProcessType::FFMPEG, args);
 }
 
 bool Converter::copyAndReplaceFile(const QString &inputFilePath, const QString &outputFilePath)

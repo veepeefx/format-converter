@@ -30,7 +30,7 @@ private:
     State state_ = State::IDLE;
     ProgressHandler progressHandler_;
 
-    void copyMetaData(const QString& inputFilePath, const QString& outputFilePath, FileType type);
+    void copyMetadata(const QString& inputFilePath, const QString& outputFilePath, FileType type);
     bool copyAndReplaceFile(const QString& inputFilePath, const QString& outputFilePath);
 
     void runProcess(ProcessType processType, const QStringList& args, bool lastConversion = true);

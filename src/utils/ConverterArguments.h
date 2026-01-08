@@ -140,12 +140,24 @@ namespace FFmpeg::Converter {
     }
 }
 
-namespace FFmpeg::RemoveMetaData {
+namespace FFmpeg::RemoveMetadata {
 
-    inline QStringList videoArgs(const QString& inputFilePath, const QString& outputFilePath)
+    inline QStringList mp3Args(const QString& inputFilePath, const QString& outputFilePath)
     {
         QStringList args;
         args << "-i" << inputFilePath
+             << "-map_metadata" << "-1"
+             << "-c" << "copy"
+             << outputFilePath;
+
+        return args;
+    }
+
+    inline QStringList mkvArgs(const QString& inputFilePath, const QString& outputFilePath)
+    {
+        QStringList args;
+        args << "-i" << inputFilePath
+             << "-map" << "0"
              << "-map_metadata" << "-1"
              << "-c" << "copy"
              << outputFilePath;
@@ -167,19 +179,86 @@ namespace FFprobe {
     }
 }
 
-namespace ExifTool {
+namespace ExifTool::RemoveMetadata {
 
-    inline QStringList removeMetadata(const QString& filePath)
+    // images
+    // legacyVideos (AVI, FLV, WMV)
+    // standard audio (FLAC, OGG, ACC, WMA, AIFF, ?WAV?)
+    inline QStringList standardArgs (const QString& filePath)
     {
-        QStringList args;
-        args << "-all="
-             << "-overwrite_original"
-            << filePath;
-
-        return args;
+        return {
+            "-all=",
+            "-overwrite_original",
+            filePath
+        };
     }
 
-    inline QStringList copyMetadata(const QString& inputFilePath, const QString& outputFilePath)
+    // videos MP4, MOV, M4V
+    // audio ALAC, M4A
+    inline QStringList quickTimeArgs(const QString& filePath)
+    {
+        return {
+            "-all=",
+            "-XMP:all=",
+            "-QuickTime:all=",
+            "-UserData:all=",
+            "-Keys:all=",
+            "-overwrite_original",
+            filePath
+        };
+    }
+
+    inline QStringList audioArgs(const QString& filePath, int enumValue)
+    {
+        switch (static_cast<AudioFormats>(enumValue)) {
+            case AudioFormats::ALAC_M4A:
+                return quickTimeArgs(filePath);
+
+            case AudioFormats::AAC:
+            case AudioFormats::AIFF:
+            case AudioFormats::FLAC:
+            case AudioFormats::OGG:
+            case AudioFormats::WAV:
+            case AudioFormats::WMA:
+                return standardArgs(filePath);
+
+            // ExifTool doesn't support MP3
+            case AudioFormats::MP3:
+            default:
+                return {};
+        }
+    }
+
+    inline QStringList imageArgs(QString filePath, int enumValue)
+    {
+        return standardArgs(filePath);
+    }
+
+    inline QStringList videoArgs(QString filePath, int enumValue)
+    {
+        switch (static_cast<VideoFormats>(enumValue)) {
+            case VideoFormats::MP4:
+            case VideoFormats::MOV:
+            case VideoFormats::M4V:
+                return quickTimeArgs(filePath);
+
+            case VideoFormats::AVI:
+            case VideoFormats::FLV:
+            case VideoFormats::WMV:
+                return standardArgs(filePath);
+
+            // Exiftool doesn't support WEBM MPEG or MKV
+            case VideoFormats::WEBM:
+            case VideoFormats::MPEG:
+            case VideoFormats::MKV:
+            default:
+                return {};
+        }
+    }
+}
+
+namespace ExifTool::CopyMetadata {
+    inline QStringList standardArgs(const QString& inputFilePath, const QString& outputFilePath)
     {
         QStringList args;
         args << "-TagsFromFile" << inputFilePath
@@ -188,6 +267,59 @@ namespace ExifTool {
              << "-overwrite_original"
              << "-ignoreMinorErrors"
              << outputFilePath;
+
+        return args;
+    }
+}
+
+namespace Arguments {
+    inline QStringList converter(const QString& inputFilePath,
+                                 const QString& outputFilePath,
+                                 FormatInfo format)
+    {
+        QStringList args;
+        switch (format.fileType) {
+            case FileType::AUDIO:
+                args = FFmpeg::Converter::audioArgs(inputFilePath, outputFilePath, format.enumValue);
+                break;
+
+            case FileType::VIDEO:
+                args = FFmpeg::Converter::videoArgs(inputFilePath, outputFilePath, format.enumValue);
+                break;
+
+            case FileType::IMAGE:
+                args = FFmpeg::Converter::imageArgs(inputFilePath, outputFilePath, format.enumValue);
+                break;
+
+            case FileType::UNKNOWN:
+                args = {};
+                break;
+        }
+
+        return args;
+    }
+
+    inline QStringList metadata(const QString& filePath,
+                                FormatInfo format)
+    {
+        QStringList args;
+
+        switch (format.fileType) {
+            case FileType::AUDIO:
+                args = ExifTool::RemoveMetadata::audioArgs(filePath, format.enumValue);
+                break;
+
+            case FileType::IMAGE:
+                args = ExifTool::RemoveMetadata::imageArgs(filePath, format.enumValue);
+                break;
+
+            case FileType::VIDEO:
+                args = ExifTool::RemoveMetadata::videoArgs(filePath, format.enumValue);
+                break;
+
+            case FileType::UNKNOWN:
+                args = {};
+        }
 
         return args;
     }
