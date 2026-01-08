@@ -85,6 +85,7 @@ void Converter::runMetadataRemover(const QString& inputFilePath, const QString& 
     // if args are valid we can run exiftool
     if (!args.empty()) {
         runProcess(ProcessType::EXIFTOOL, args);
+        return;
     }
 
     // empty args can be unknown filetype OR filetypes not working with ExifTool
