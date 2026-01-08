@@ -1,6 +1,7 @@
 #include "Converter.h"
 #include "utils/CommonEnums.h"
 #include "utils/ConverterArguments.h"
+#include "ProgressHandler.h"
 
 #include <iostream>
 #include <QFileInfo>
@@ -8,41 +9,115 @@
 #include <QRegularExpression>
 
 
-void Converter::runConverter(const QString& inputFilePath, const QString& outputFilePath)
+Converter::Converter(QObject* parent) : QObject(parent)
 {
-    emit newLogMessage("\nStarting format converter...\n");
-    FormatInfo format = getOutputFormat(outputFilePath);
+    // passing progress handler signals to main window
+    connect(&progressHandler_, &ProgressHandler::updateProgress, this, &Converter::onUpdateProgress);
+    connect(&progressHandler_, &ProgressHandler::logMessage, this, &Converter::onLogMessage);
+    connect(&progressHandler_, &ProgressHandler::finished, this, &Converter::onFinished);
+
+    // signal when full conversion is ended (example ffmpeg + exiftool encoding + metadata move)
+    connect(&progressHandler_, &ProgressHandler::allDone, this, &Converter::conversionEnded);
+}
+
+void Converter::runConverter(const QString& inputFilePath, const QString& outputFilePath, bool saveMetadata)
+{
+    if (state_ != State::IDLE) {
+        return;
+    }
+    state_ = State::RUNNING;
+
+    emit onLogMessage("\nStarting format converter...\n");
+    FormatInfo format = getFileFormat(outputFilePath);
+    FileType type = format.fileType;
     QStringList args;
 
     // building arguments depending on filetype and format
-    switch (format.fileType) {
+    switch (type) {
         case FileType::AUDIO:
             args = FFmpeg::Converter::audioArgs(inputFilePath, outputFilePath, format.enumValue);
             break;
+
         case FileType::VIDEO:
             args = FFmpeg::Converter::videoArgs(inputFilePath, outputFilePath, format.enumValue);
             break;
+
         case FileType::IMAGE:
             args = FFmpeg::Converter::imageArgs(inputFilePath, outputFilePath, format.enumValue);
             break;
+
         case FileType::UNKNOWN:
-            emit newLogMessage("File type unknown!");
+            emit onLogMessage("File type unknown!");
             return;
     }
 
-    runFFmpeg(args);
+    // if metadata isn't saved we only run ffmpeg and end
+    if (!saveMetadata) {
+        runProcess(ProcessType::FFMPEG, args, true);
+        return;
+    }
 
-    connect(this, &Converter::progressFinished, this, [this, inputFilePath, outputFilePath]() {
-        runExifTool(ExifTool::copyMetadata(inputFilePath, outputFilePath));
-        disconnect(this, &Converter::progressFinished, nullptr, nullptr);
-    });
+    // if metadata is saved we first run ffmpeg and after exiftool
+    runProcess(ProcessType::FFMPEG, args, false);
+    copyMetaData(inputFilePath, outputFilePath, type);
 }
 
-void Converter::runMetaDataRemover(const QString& inputFilePath, const QString& outputFilePath)
+void Converter::runMetadataRemover(const QString& inputFilePath, const QString& outputFilePath)
 {
-    emit newLogMessage("\nStarting metadata remover...\n");
-    FormatInfo format = getOutputFormat(outputFilePath);
+    if (state_ != State::IDLE) {
+        return;
+    }
+    state_ = State::RUNNING;
+    emit onLogMessage("\nStarting metadata remover...\n");
 
+    if (!copyAndReplaceFile(inputFilePath, outputFilePath)) { return; }
+
+    FormatInfo format = getFileFormat(outputFilePath);
+    // for metadata removal input and output filetypes are the same
+    switch (format.fileType) {
+        // only mp4 type non-fragmented formats are supported by exiftool we fall back to ffmpeg
+
+        // all audio and image formats are supported by exiftool
+        case FileType::AUDIO:
+        case FileType::IMAGE: {
+            QStringList args = ExifTool::removeMetadata(outputFilePath);
+            runProcess(ProcessType::EXIFTOOL, args);
+            return;
+        }
+
+        case FileType::VIDEO: {
+            QStringList args = ExifTool::removeMetadata(outputFilePath);
+            runProcess(ProcessType::EXIFTOOL, args);
+            //emit onLogMessage("Not in use");
+            break;
+        }
+        case FileType::UNKNOWN: {
+            emit onLogMessage("File type unknown!");
+        }
+    }
+
+    //state_ = State::IDLE;
+}
+
+void Converter::copyMetaData(const QString &inputFilePath, const QString &outputFilePath, FileType type)
+{
+    connect(&progressHandler_, &ProgressHandler::finished, this,
+    [this, outputFilePath, inputFilePath, type]() {
+
+        // images and audio metadata is moved with ExifTool
+        if (type == FileType::IMAGE || type == FileType::AUDIO) {
+            QStringList args = ExifTool::copyMetadata(inputFilePath, outputFilePath);
+            runProcess(ProcessType::EXIFTOOL, args, true);
+
+        // video metadata
+        } else if (type == FileType::VIDEO) {
+
+        }
+    }, Qt::SingleShotConnection);
+}
+
+bool Converter::copyAndReplaceFile(const QString &inputFilePath, const QString &outputFilePath)
+{
     // if outputfile exists it gets removed
     if (QFile::exists(outputFilePath)) {
         QFile::remove(outputFilePath);
@@ -50,83 +125,56 @@ void Converter::runMetaDataRemover(const QString& inputFilePath, const QString& 
 
     // and we copy our input file to output
     if (!QFile::copy(inputFilePath, outputFilePath)) {
-        emit newLogMessage("\nFailed to make copy of the original file!\n");
-        return;
+        emit onLogMessage("\nFailed to make copy of the original file!\n");
+        return false;
     }
 
-    switch (format.fileType) {
-        // all audio and image formats are supported by exiftool
-        case FileType::AUDIO:
-        case FileType::IMAGE:
-            runExifTool(ExifTool::removeMetadata(outputFilePath));
-            break;
-
-        // only mp4 type non-fragmented formats are supported by exiftool we fall back to ffmpeg
-        case FileType::VIDEO:
-            //runFFmpeg(FFmpeg::RemoveMetaData::videoArgs(outputFilePath, outputFilePath));
-            emit newLogMessage("Not in use");
-            break;
-
-        case FileType::UNKNOWN:
-            emit newLogMessage("File type unknown!");
-    }
+    return true;
 }
 
-void Converter::runFFmpeg(const QStringList& args)
+void Converter::runProcess(ProcessType processType, const QStringList& args, bool lastConversion)
 {
-    // emitting signal that ffmpeg processing has started
-    emit progressChanged(0);
-    emit newLogMessage("FFmpeg running...");
+    switch (processType) {
+        case ProcessType::FFMPEG:   state_ = State::FFMPEG_RUNNING;     break;
+        case ProcessType::EXIFTOOL: state_ = State::EXIFTOOL_RUNNING;   break;
+    }
 
-    QProcess* ffmpeg = new QProcess(this);
+    QString processName = processTypeToString(processType);
+    progressHandler_.progressStarted(processName);
 
+    QProcess* qProcess = new QProcess(this);
+    connectProcesses(qProcess, processType, lastConversion);
+
+    qProcess->start(processName.toLower(), args);
+}
+
+void Converter::connectProcesses(QProcess *process, ProcessType processType, bool lastConversion)
+{
+    QString processName = processTypeToString(processType);
     // connecting progress updates
-    totalDuration_ = 0;
-    connect(ffmpeg, &QProcess::readyReadStandardError, [ffmpeg, this]() {
-        handleProgress(ffmpeg->readAllStandardError());
-    });
-
-    // emitting error signal
-    connect(ffmpeg, &QProcess::errorOccurred, [this]() {
-        emit newLogMessage("\nProgress failed during FFmpeg process!\n");
-    });
-
-    // emitting finished signal
-    connect(ffmpeg, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [this] () {
-        emit progressChanged(100, true);
-        emit newLogMessage("\nFFmpeg finished!\n");
-        emit progressFinished();
-    });
-
-    ffmpeg->start("ffmpeg", args);
-}
-
-void Converter::runExifTool(const QStringList& args)
-{
-    emit newLogMessage("ExifTool Running...");
-    QProcess* exifTool = new QProcess(this);
-
-    connect(exifTool, &QProcess::readyReadStandardError, [exifTool, this]() {
-        QString text = exifTool->readAllStandardError().trimmed();
-        emit newLogMessage("ExifTool: " + text);
-        if (text.contains("Can't write a")) {
-            emit newLogMessage("ExifTool: Using best effort to move all metadata");
+    connect(process, &QProcess::readyReadStandardError, [process, this, processType]() {
+        switch (processType) {
+            case ProcessType::FFMPEG:
+                progressHandler_.handleFfmpegProgress(process->readAllStandardError().trimmed());
+                break;
+            case ProcessType::EXIFTOOL:
+                progressHandler_.handleExifToolProgress(process->readAllStandardError().trimmed());
+                break;
         }
     });
 
     // emitting error signal
-    connect(exifTool, &QProcess::errorOccurred, [this]() {
-        emit newLogMessage("\nProgress failed during ExifTool process!\n");
+    connect(process, &QProcess::errorOccurred, [this, processName]() {
+        progressHandler_.progressFailed(processName);
     });
 
     // emitting finished signal
-    connect(exifTool, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [this] () {
-        emit progressChanged(100, true);
-        emit newLogMessage("\nExifTool finished!\n");
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        [this, processName, lastConversion] () {
+        progressHandler_.progressFinished(processName, lastConversion);
     });
-
-    exifTool->start("exiftool", args);
 }
+
 /*
 void Converter::removeVideoMetadata(const QString& filePath, VideoFormats format)
 {
@@ -160,56 +208,10 @@ bool Converter::isFragmented(const QString &filePath)
     return !output.isEmpty();
 }
 */
-void Converter::handleProgress(const QString& text)
+
+FormatInfo Converter::getFileFormat(const QString& filePath)
 {
-    for (const QString &line : text.split('\n')) {
-
-        const QString trimmed = line.trimmed();
-        if (trimmed.isEmpty()) { continue; }
-        if (!line.contains("time=") && !line.contains("Duration")) { continue; }
-
-        emit newLogMessage("FFmpeg: " + trimmed);
-
-        if (totalDuration_ == 0) {
-            getTotalDuration(line);
-            continue;
-        }
-
-        getProgress(line);
-    }
-}
-
-void Converter::getTotalDuration(const QString &line)
-{
-    static const QRegularExpression reDuration(R"(Duration: (\d+):(\d+):(\d+\.\d+))");
-
-    QRegularExpressionMatch match = reDuration.match(line);
-    if (match.hasMatch()){
-        totalDuration_ = match.captured(1).toInt() * 3600
-                        + match.captured(2).toInt() * 60
-                        + match.captured(3).toDouble();
-    }
-}
-
-void Converter::getProgress(const QString& line)
-{
-    static const QRegularExpression reTime(R"(time=(\d+):(\d+):(\d+\.\d+))" );
-
-    QRegularExpressionMatch match = reTime.match(line);
-    if (match.hasMatch() && totalDuration_ > 0) {
-        double current = match.captured(1).toInt() * 3600
-                        + match.captured(2).toInt() * 60
-                        + match.captured(3).toDouble();
-        int progress = static_cast<int>((current / totalDuration_) * 100);
-
-        if (progress >= 100) { progress = 100; }
-        emit progressChanged(progress);
-    }
-}
-
-FormatInfo Converter::getOutputFormat(const QString& outputFilePath)
-{
-    QString suffix = QFileInfo(outputFilePath).suffix();
+    QString suffix = QFileInfo(filePath).suffix();
     for (const FormatInfo& it : fileFormats) {
         if (it.label == suffix) {
             // always finds correct it as only supported suffixes are given previously
@@ -217,5 +219,10 @@ FormatInfo Converter::getOutputFormat(const QString& outputFilePath)
         }
     }
     return {FileType::UNKNOWN};
+}
+
+void Converter::conversionEnded()
+{
+    state_ = State::IDLE;
 }
 

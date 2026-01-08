@@ -1,43 +1,56 @@
 #ifndef FORMAT_CONVERTER_CONVERTER_H
 #define FORMAT_CONVERTER_CONVERTER_H
-#include <QObject>
+#include <QProcess>
 #include <QString>
 
+#include "ProgressHandler.h"
 #include "utils/CommonEnums.h"
+
+enum class State {
+    IDLE,
+    RUNNING,            // some function is running
+    FFMPEG_RUNNING,     // while FFmpeg running in QProcess
+    EXIFTOOL_RUNNING    // while ExifTool running in QProcess
+};
 
 class Converter : public QObject {
     Q_OBJECT
 
 public:
 
-    Converter(QObject* parent = nullptr) : QObject(parent), totalDuration_(0) {};
+    Converter(QObject* parent = nullptr);
     ~Converter() = default;
 
-    void runConverter(const QString& inputFilePath, const QString& outputFilePath);
-    void runMetaDataRemover(const QString& inputFilePath, const QString& outputFilePath);
+    void runConverter(const QString& inputFilePath, const QString& outputFilePath, bool saveMetadata);
+    void runMetadataRemover(const QString& inputFilePath, const QString& outputFilePath);
 
 private:
 
-    double totalDuration_;
-    void runFFmpeg(const QStringList& args);
-    void runExifTool(const QStringList& args);
+    // keeps track on converter state. new calls are accepted when state is idle
+    State state_ = State::IDLE;
+    ProgressHandler progressHandler_;
+
+    void copyMetaData(const QString& inputFilePath, const QString& outputFilePath, FileType type);
+    bool copyAndReplaceFile(const QString& inputFilePath, const QString& outputFilePath);
+
+    void runProcess(ProcessType processType, const QStringList& args, bool lastConversion = true);
+    void connectProcesses(QProcess* process, ProcessType processType, bool lastConversion);
 
     void removeVideoMetadata(const QString& filePath, VideoFormats format);
     bool isFragmented(const QString& filePath);
 
-    // handless ffmpeg progress updates
-    void handleProgress(const QString& text);
-    void getTotalDuration(const QString& line);
-    void getProgress(const QString& line);
+    static FormatInfo getFileFormat(const QString& filePath);
 
-    static FormatInfo getOutputFormat(const QString& outputFilePath);
+private slots:
+    void conversionEnded();
 
 signals:
-    // converter signals
-    void progressChanged(int value, bool isFinished = false);
-    void progressFinished();
-    void newLogMessage(const QString& logMessage);
+    void allDone();
 
+    // pass trought signals from progress handler to main window
+    void onUpdateProgress(int percent, bool isFinished = false);
+    void onLogMessage(const QString& message);
+    void onFinished();
 };
 
 

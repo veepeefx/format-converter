@@ -20,7 +20,9 @@ add_executable(format-converter src/main.cpp
         src/Converter.cpp
         src/Converter.h
         src/utils/DependencyChecker.h
-        src/utils/ConverterArguments.h)
+        src/utils/ConverterArguments.h
+        src/ProgressHandler.cpp
+        src/ProgressHandler.h)
 
 target_link_libraries(format-converter
         Qt::Core

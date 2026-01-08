@@ -129,17 +129,17 @@ void MainWindow::initConvertSettings(QHBoxLayout& layout)
 
     row++;
 
-    QCheckBox* metadataPreservation = new QCheckBox("Preserve metadata");
+    metadataCheckBox_ = new QCheckBox("Preserve metadata");
 
     // if exiftool isn't installed metadata preservation isn't in use
     if (!DependencyChecker::isExifToolAvailable()){
-        metadataPreservation->setToolTip("Install ExifTool to be able to preserve metadata");
-        widgetNotInUse_.insert(metadataPreservation);
+        metadataCheckBox_->setToolTip("Install ExifTool to be able to preserve metadata");
+        widgetNotInUse_.insert(metadataCheckBox_);
     } else {
-        metadataPreservation->setChecked(true);
+        metadataCheckBox_->setChecked(true);
     }
 
-    convertLayout->addWidget(metadataPreservation, row, 0, 1, 2);
+    convertLayout->addWidget(metadataCheckBox_, row, 0, 1, 2);
 
     layout.addLayout(convertLayout);
 }
@@ -176,13 +176,13 @@ void MainWindow::initProgressIndicator()
     mainLayout_->addWidget(logBox);
     mainLayout_->addWidget(progressBar);
 
-    connect(converter_, &Converter::newLogMessage, this, [logBox](const QString& logMessage) {
-        logBox->append(logMessage);
+    connect(converter_, &Converter::onLogMessage, this, [logBox](const QString& message) {
+        logBox->append(message);
         logBox->moveCursor(QTextCursor::End);
     });
 
     // updating progressbar and label
-    connect(converter_, &Converter::progressChanged, this, [progressBar, logBox] (int progress) {
+    connect(converter_, &Converter::onUpdateProgress, this, [progressBar, logBox] (int progress) {
         progressBar->setValue(progress);
     });
 
@@ -300,7 +300,7 @@ void MainWindow::convertButtonClicked()
             return;
         }
     }
-    converter_->runConverter(iFilePathLE_->text(), outputFilePath);
+    converter_->runConverter(iFilePathLE_->text(), outputFilePath, metadataCheckBox_->isChecked());
 }
 
 void MainWindow::removeButtonClicked()
@@ -318,7 +318,7 @@ void MainWindow::removeButtonClicked()
         }
     }
 
-    converter_->runMetaDataRemover(iFilePathLE_->text(), outputFilePath);
+    converter_->runMetadataRemover(iFilePathLE_->text(), outputFilePath);
 }
 
 void MainWindow::convertFileTypeChanged()

@@ -1,8 +1,22 @@
 #ifndef FORMAT_CONVERTER_COMMONENUMS_H
 #define FORMAT_CONVERTER_COMMONENUMS_H
-#include <qmap.h>
-#include <qset.h>
-#include <qstring.h>
+
+#include <QSet>
+#include <QString>
+
+enum class ProcessType {
+    FFMPEG,
+    EXIFTOOL
+};
+
+inline QString processTypeToString(ProcessType process)
+{
+    switch (process) {
+        case ProcessType::FFMPEG:   return "FFmpeg";
+        case ProcessType::EXIFTOOL: return "ExifTool";
+        default:                return "Unknown";
+    }
+}
 
 enum class FileType {
     AUDIO,

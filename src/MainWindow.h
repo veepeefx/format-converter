@@ -6,6 +6,7 @@
 #include <QMainWindow>
 #include <QGridLayout>
 #include <QComboBox>
+#include <QCheckBox>
 
 #include "utils/CommonEnums.h"
 #include "Converter.h"
@@ -28,6 +29,7 @@ private:
     QLineEdit* oFolderPathLE_ = nullptr;
     QLineEdit* oFileNameLE_ = nullptr;
     QComboBox* oFileTypeCB_ = nullptr;
+    QCheckBox* metadataCheckBox_ = nullptr;
 
     // all widgets which cannot be enabled due restrictions
     // for example exiftool isn't installed
