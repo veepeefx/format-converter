@@ -128,7 +128,9 @@ namespace FFmpeg::Converter {
             case static_cast<int>(ImageFormats::HEIF):
                 args << "-c:v" << "libx265"
                      << "-x265-params" << "lossless=1"
-                     << "-tag:v" << "hvc1";
+                     << "-pix_fmt" << "yuv420p"
+                     << "-tag:v" << "hvc1"
+                     << "-f" << "heif";
                 break;
             case static_cast<int>(ImageFormats::WEBP):
                 args << "-c:v" << "libwebp"
@@ -276,9 +278,7 @@ namespace ExifTool::CopyMetadata {
         QStringList args;
         args << "-TagsFromFile" << inputFilePath
              << "-All:All"
-             << "-All:All>XMP"
              << "-overwrite_original"
-             << "-ignoreMinorErrors"
              << outputFilePath;
 
         return args;

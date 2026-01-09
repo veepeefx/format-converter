@@ -14,7 +14,7 @@ inline QString processTypeToString(ProcessType process)
     switch (process) {
         case ProcessType::FFMPEG:   return "FFmpeg";
         case ProcessType::EXIFTOOL: return "ExifTool";
-        default:                return "Unknown";
+        default:                    return "Unknown";
     }
 }
 
@@ -33,6 +33,7 @@ enum class VideoFormats {
     MP4, AVI, MKV, MOV, WMV, FLV, WEBM, MPEG, M4V
 };
 
+// GIF, BMP, ICO no metadata by design
 enum class ImageFormats {
     JPEG, PNG, GIF, BMP, TIFF, HEIF, WEBP, ICO
 };
@@ -76,6 +77,7 @@ static QVector<FormatInfo> fileFormats {
         { FileType::IMAGE, static_cast<int>(ImageFormats::TIFF), "tiff" },
         { FileType::IMAGE, static_cast<int>(ImageFormats::HEIF), "heif" },
         { FileType::IMAGE, static_cast<int>(ImageFormats::HEIF), "heic" },
+        { FileType::IMAGE, static_cast<int>(ImageFormats::WEBP), "webp"},
         { FileType::IMAGE, static_cast<int>(ImageFormats::ICO), "ico" },
 };
 
