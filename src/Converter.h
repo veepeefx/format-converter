@@ -31,13 +31,12 @@ private:
     ProgressHandler progressHandler_;
 
     void copyMetadata(const QString& inputFilePath, const QString& outputFilePath, FileType type);
-    bool copyAndReplaceFile(const QString& inputFilePath, const QString& outputFilePath);
+    bool checkInputAndOutput(const QString& inputFilePath, const QString& outputFilePath);
+    bool copyAndReplaceFile(const QString &inputFilePath, const QString &outputFilePath);
+    void ffmpegMetadataRemoval(const QString& inputFilePath, const QString& outputFilePath, FormatInfo format);
 
     void runProcess(ProcessType processType, const QStringList& args, bool lastConversion = true);
     void connectProcesses(QProcess* process, ProcessType processType, bool lastConversion);
-
-    void removeVideoMetadata(const QString& filePath, VideoFormats format);
-    bool isFragmented(const QString& filePath);
 
     static FormatInfo getFileFormat(const QString& filePath);
 
@@ -46,6 +45,7 @@ private slots:
 
 signals:
     void allDone();
+    void error(const QString& message);
 
     // pass trought signals from progress handler to main window
     void onUpdateProgress(int percent, bool isFinished = false);

@@ -114,7 +114,9 @@ namespace FFmpeg::Converter {
                                  int enumValue)
     {
         QStringList args;
-        args << "-y" << "-i" << inputFilePath;
+        args << "-y" << "-i" << inputFilePath
+             << "-update" << "1"
+             << "-frames:v" << "1";
 
         switch (enumValue) {
             case static_cast<int>(ImageFormats::JPEG):
@@ -145,11 +147,22 @@ namespace FFmpeg::RemoveMetadata {
     inline QStringList mp3Args(const QString& inputFilePath, const QString& outputFilePath)
     {
         QStringList args;
-        args << "-i" << inputFilePath
+        args << "-y" << "-i"
+            << inputFilePath
              << "-map_metadata" << "-1"
              << "-c" << "copy"
              << outputFilePath;
 
+        return args;
+    }
+
+    inline QStringList wavArgs(const QString& inputFilePath, const QString& outputFilePath)
+    {
+        QStringList args;
+        args << "-i" << inputFilePath
+             << "-map_metadata" << "-1"
+             << "-c:a" << "pcm_s16le"
+             << outputFilePath;
         return args;
     }
 
@@ -218,12 +231,12 @@ namespace ExifTool::RemoveMetadata {
             case AudioFormats::AIFF:
             case AudioFormats::FLAC:
             case AudioFormats::OGG:
-            case AudioFormats::WAV:
             case AudioFormats::WMA:
                 return standardArgs(filePath);
 
-            // ExifTool doesn't support MP3
+            // ExifTool doesn't support MP3, WAV
             case AudioFormats::MP3:
+            case AudioFormats::WAV:
             default:
                 return {};
         }
