@@ -162,6 +162,12 @@ void MainWindow::initMetaDataRemoverSettings(QHBoxLayout& layout)
     metaDataLayout->addWidget(removeButton, row, 0, 1, 2);
     connect(removeButton, &QPushButton::clicked, this, &MainWindow::removeButtonClicked);
 
+    // if exiftool isn't installed metadata removal isn't in use
+    if (!DependencyChecker::isExifToolAvailable()) {
+        removeButton->setToolTip("Install ExifTool to be able to remove metadata");
+        widgetNotInUse_.insert(removeButton);
+    }
+
     layout.addLayout(metaDataLayout);
 }
 

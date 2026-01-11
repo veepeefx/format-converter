@@ -148,36 +148,25 @@ namespace FFmpeg::RemoveMetadata {
 
     inline QStringList mp3Args(const QString& inputFilePath, const QString& outputFilePath)
     {
-        QStringList args;
-        args << "-y" << "-i"
-            << inputFilePath
-             << "-map_metadata" << "-1"
-             << "-c" << "copy"
-             << outputFilePath;
-
-        return args;
-    }
-
-    inline QStringList wavArgs(const QString& inputFilePath, const QString& outputFilePath)
-    {
-        QStringList args;
-        args << "-i" << inputFilePath
-             << "-map_metadata" << "-1"
-             << "-c:a" << "pcm_s16le"
-             << outputFilePath;
-        return args;
+        return {
+            "-y", "-i",
+            inputFilePath,
+            "-map_metadata", "-1",
+            "-c", "copy",
+            outputFilePath
+        };
     }
 
     inline QStringList mkvArgs(const QString& inputFilePath, const QString& outputFilePath)
     {
-        QStringList args;
-        args << "-i" << inputFilePath
-             << "-map" << "0"
-             << "-map_metadata" << "-1"
-             << "-c" << "copy"
-             << outputFilePath;
-
-        return args;
+        return {
+            "-i", "-y",
+            inputFilePath,
+            "-map", "0",
+            "-map_metadata", "-1",
+            "-c", "copy",
+            outputFilePath
+        };
     }
 }
 
@@ -275,13 +264,13 @@ namespace ExifTool::RemoveMetadata {
 namespace ExifTool::CopyMetadata {
     inline QStringList standardArgs(const QString& inputFilePath, const QString& outputFilePath)
     {
-        QStringList args;
-        args << "-TagsFromFile" << inputFilePath
-             << "-All:All"
-             << "-overwrite_original"
-             << outputFilePath;
-
-        return args;
+        return {
+            "-TagsFromFile",
+            inputFilePath,
+            "-All:All",
+            "-overwrite_original",
+            outputFilePath
+        };
     }
 }
 
@@ -312,7 +301,7 @@ namespace Arguments {
         return args;
     }
 
-    inline QStringList metadata(const QString& filePath,
+    inline QStringList metadataRemoval(const QString& filePath,
                                 FormatInfo format)
     {
         QStringList args;

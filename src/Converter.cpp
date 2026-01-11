@@ -63,6 +63,7 @@ void Converter::copyMetadata(const QString &inputFilePath, const QString &output
     connect(&progressHandler_, &ProgressHandler::finished, this,
     [this, outputFilePath, inputFilePath, type]() {
 
+        // BMP is not supported by ExifTool (it doesn't include metadata anyway)
         // images and audio metadata is moved with ExifTool
         if (type == FileType::IMAGE || type == FileType::AUDIO) {
             QStringList args = ExifTool::CopyMetadata::standardArgs(inputFilePath, outputFilePath);
@@ -70,7 +71,7 @@ void Converter::copyMetadata(const QString &inputFilePath, const QString &output
 
         // video metadata
         } else if (type == FileType::VIDEO) {
-
+            emit error("Metadata transfer for videos isn't yet implemented");
         }
     }, Qt::SingleShotConnection);
 }
@@ -86,7 +87,7 @@ void Converter::runMetadataRemover(const QString& inputFilePath, const QString& 
 
     FormatInfo format = getFileFormat(inputFilePath);
 
-    QStringList args = Arguments::metadata(outputFilePath, format);
+    QStringList args = Arguments::metadataRemoval(outputFilePath, format);
 
     // if args are empty we need to use ffmpeg. ffmpeg overrides file if needed.
     if (args.empty()){
@@ -167,12 +168,12 @@ void Converter::runProcess(ProcessType processType, const QStringList& args, boo
     progressHandler_.progressStarted(processName);
 
     QProcess* qProcess = new QProcess(this);
-
+/*
     // FOR ARGUMENT TESTING
     connect(qProcess, &QProcess::readyReadStandardError, [qProcess]() {
         std::cerr << qProcess->readAllStandardError().toStdString() << std::endl;
     });
-
+*/
     connectProcesses(qProcess, processType, lastConversion);
 
     qProcess->start(processName.toLower(), args);
