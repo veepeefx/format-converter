@@ -1,3 +1,4 @@
+# WORK IN PROGRESS!
 # Format Converter 
 ## (C++ / Qt / FFmpeg)
 
@@ -16,7 +17,10 @@ Make backups! READ FULL DISCLAIMER!**
 ## Supported Formats
 - Audio: mp3, wav, aac, flac, ogg, wma, m4a, aiff
 - Video: mp4, avi, mkv, mov, wmv, flv, webm, mpeg, m4v
-- Image: jpeg, png, gif, bmp, tiff, heif, ico
+- Image: jpeg, png, gif, bmp, tiff, heif, webp, ico 
+
+Format conversions seems to be fully working, excluding heif image format.  
+Metadata copying and removal still has issues with some formats.
 
 ## Disclaimer
 
@@ -27,6 +31,9 @@ perfectly in all situations.
 - Some formats may retain certain metadata or technical data that cannot safely be removed.
 - Using this tool may result in corrupted files, loss of data, or unintended changes to the
 original content.
+- Opting out of “Preserve metadata” does not remove metadata from the generated file and metadata
+  embedded in the source file may still remain in the output file. Disabling it simply tells the
+  application not to explicitly copy metadata during processing.
 
 **Use at your own risk.** The user is responsible for backups and any consequences of file modifications.
 
